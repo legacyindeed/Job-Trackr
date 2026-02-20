@@ -24,6 +24,8 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
     case 'x': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
     case 'check': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
     case 'alert': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+    case 'eye': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+    case 'eye-slash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
     default: return null;
   }
 };
@@ -66,6 +68,7 @@ function DashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quote, setQuote] = useState('');
   const [dailyTips, setDailyTips] = useState<string[]>([]);
+  const [isAnonymized, setIsAnonymized] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -369,7 +372,16 @@ function DashboardContent() {
         {/* Recent Activity */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800">Recent Applications</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold text-slate-800">Recent Applications</h3>
+              <button
+                onClick={() => setIsAnonymized(!isAnonymized)}
+                className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 group"
+                title={isAnonymized ? "Show names" : "Anonymize names"}
+              >
+                <Icon name={isAnonymized ? "eye-slash" : "eye"} className="w-4 h-4 group-hover:text-blue-500" />
+              </button>
+            </div>
             <button onClick={() => handleTabChange('applications')} className="text-blue-600 text-xs font-bold hover:underline">View All</button>
           </div>
           <div className="space-y-4">
@@ -380,8 +392,12 @@ function DashboardContent() {
                     {job.company?.[0]?.toUpperCase() || 'J'}
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-slate-800">{job.title}</p>
-                    <p className="text-xs text-slate-400 font-medium">{job.company}</p>
+                    <p className={`font-bold text-sm text-slate-800 transition-all duration-300 ${isAnonymized ? 'blur-[4px] select-none opacity-50' : ''}`}>
+                      {isAnonymized ? 'Role Hidden' : job.title}
+                    </p>
+                    <p className={`text-xs text-slate-400 font-medium transition-all duration-300 ${isAnonymized ? 'blur-[4px] select-none opacity-40' : ''}`}>
+                      {isAnonymized ? 'Company Hidden' : job.company}
+                    </p>
                   </div>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${getHeaderStyles(job.status)}`}>
