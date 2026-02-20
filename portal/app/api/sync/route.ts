@@ -80,7 +80,7 @@ export async function OPTIONS(request: Request) {
     const headers = {
         'Access-Control-Allow-Origin': origin || '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Credentials': 'true',
     };
     return NextResponse.json({}, { headers });

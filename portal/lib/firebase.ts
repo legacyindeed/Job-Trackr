@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,7 +10,25 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+
+if (typeof window !== "undefined") {
+    // Client-side initialization
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+} else {
+    // Server-side / Build-time dummy or lazy initialization
+    // We initialize it anyway because some hooks might call it, 
+    // but the actual usage will fail safely or be skipped
+    try {
+        app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+    } catch (e) {
+        // Fallback for build time without keys
+        app = {} as FirebaseApp;
+        auth = {} as Auth;
+    }
+}
 
 export { auth };
