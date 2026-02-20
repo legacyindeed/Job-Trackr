@@ -1,4 +1,6 @@
 'use client';
+// Build Trigger: Migration v1
+
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
