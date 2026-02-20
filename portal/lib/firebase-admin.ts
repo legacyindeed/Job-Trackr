@@ -3,7 +3,8 @@ import * as admin from 'firebase-admin';
 function getAdminApp(): admin.app.App | { error: string } {
     if (admin.apps.length > 0) return admin.apps[0] as admin.app.App;
 
-    const projectId = process.env.FIREBASE_PROJECT_ID;
+    // Try server-side secret first, fallback to public project ID if missing
+    const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
