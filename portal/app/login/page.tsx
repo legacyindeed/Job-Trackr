@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Script from 'next/script';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirebaseAuth } from '../../lib/firebase';
 
@@ -109,29 +108,7 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {/* Lottie Animation & Portal Logos */}
-                        <div className="mt-12 flex items-center gap-8 animate-in fade-in duration-1000 delay-500">
-                            <div className="w-24 h-24 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 flex items-center justify-center overflow-hidden">
-                                <Script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module" />
-                                {/* @ts-ignore */}
-                                <dotlottie-player
-                                    src="https://lottie.host/8e21a8c3-784d-4581-9b16-621817799042/3w1u6WvC3e.json"
-                                    background="transparent"
-                                    speed="1"
-                                    style={{ width: '100px', height: '100px' }}
-                                    loop
-                                    autoplay
-                                />
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Trusted by elite recruiters</p>
-                                <div className="flex items-center gap-4 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/01/LinkedIn_Logo.svg" className="h-5 invert" alt="LinkedIn" />
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Indeed_logo.svg" className="h-4 invert" alt="Indeed" />
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" className="h-4 invert" alt="Google" />
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div>
