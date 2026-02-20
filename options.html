@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Job Tracker Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 24px;
+            color: #1f2937;
+            background: #f0f2f5;
+        }
+
+        .wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #1e293b;
+        }
+
+        label {
+            display: block;
+            margin: 16px 0 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .description {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #059669;
+        }
+
+        #status {
+            margin-left: 12px;
+            font-size: 14px;
+            color: #10b981;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <h1>Settings</h1>
+
+        <label for="webhookUrl">Google Sheets Webhook URL</label>
+        <div class="description">
+            Automatically save new jobs to a Google Sheet. Create a new sheet, open Extensions > Apps Script, paste the
+            content of <code>GOOGLE_SHEETS_SCRIPT.gs</code>, and deploy as a Web App (execute as 'Me', access 'Anyone').
+        </div>
+        <input type="text" id="webhookUrl" placeholder="https://script.google.com/macros/s/...">
+
+        <div style="margin-top: 24px;">
+            <button id="save">Save Settings</button>
+            <span id="status"></span>
+        </div>
+    </div>
+    <script src="options.js"></script>
+</body>
+
+</html>

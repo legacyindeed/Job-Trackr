@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Trackr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      width: 450px;
+      min-height: 550px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+
+    /* Minimalist Header */
+    header {
+      background: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .stats {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 500;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    #job-list {
+      list-style: none;
+      padding: 16px;
+      margin: 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    /* Clean Card Style */
+    .job-item {
+      background: white;
+      margin-bottom: 12px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      transition: all 0.2s;
+    }
+
+    .job-item:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .job-item.new-job {
+      border-left: 3px solid #3b82f6;
+    }
+
+    .job-info {
+      flex: 1;
+      min-width: 0;
+      margin-right: 12px;
+    }
+
+    .job-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: none;
+      margin-bottom: 4px;
+    }
+
+    .job-title:hover {
+      color: #2563eb;
+    }
+
+    .job-meta {
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .status-badge.synced {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: #cbd5e1;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .delete-btn:hover {
+      color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    /* Cloud Sync Footer */
+    footer {
+      padding: 16px 24px;
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sync-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      /* Red = Not connected */
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .sync-dot.connected {
+      background: #10b981;
+    }
+
+    button.primary-btn {
+      background: #0f172a;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      font-family: 'Outfit', sans-serif;
+      transition: background 0.2s;
+    }
+
+    button.primary-btn:hover {
+      background: #1e293b;
+    }
+
+    /* old clear-all removed */
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Trackr</h1>
+    <div class="stats" id="count">0 Jobs</div>
+  </header>
+
+  <ul id="job-list"></ul>
+
+  <div id="empty-state" class="empty-state" style="display: none;">
+    <div style="font-size: 32px; margin-bottom: 8px; opacity: 0.5;">☁️</div>
+    <div style="font-weight: 500;">Ready to Sync</div>
+    <small>Track jobs to sync them to the cloud</small>
+  </div>
+
+  <footer>
+    <div class="sync-status">
+      <span id="sync-text"><span class="sync-dot" id="sync-indicator"></span> Not Connected</span>
+      <a href="#" id="open-portal" style="color: #3b82f6; text-decoration: none; font-weight: 500;">Open Portal</a>
+    </div>
+    <button id="login-btn" class="primary-btn">Sign in to Cloud</button>
+    <button id="sync-now-btn" class="primary-btn" style="display: none;">Sync Now</button>
+
+    <div style="display: flex; gap: 8px; margin-top: 4px;">
+      <button id="export-local"
+        style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; color: #475569; cursor: pointer; font-size: 11px;">Export
+        CSV</button>
+      <button id="clear-all"
+        style="flex: 1; margin: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; font-size: 11px; color: #64748b;">Clear
+        Local</button>
+    </div>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

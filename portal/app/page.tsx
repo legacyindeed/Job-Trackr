@@ -1,0 +1,756 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+// Icons as a component
+const Icon = ({ name, className }: { name: string; className?: string }) => {
+  switch (name) {
+    case 'dashboard': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
+    case 'briefcase': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
+    case 'search': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+    case 'refresh': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
+    case 'pipeline': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
+    case 'bulb': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2v1" /><path d="M12 14c-2.5 0-4-1.5-4-4a4 4 0 0 1 8 0c0 2.5-1.5 4-4 4z" /><path d="M19.07 4.93L17.66 6.34" /><path d="M4.93 4.93L6.34 6.34" /></svg>;
+    case 'download': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+    case 'trash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+    case 'edit': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+    case 'x': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+    case 'check': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+    default: return null;
+  }
+};
+
+const motivationalQuotes = [
+  "Believe you can and you're halfway there.",
+  "Your talent determines what you can do. Your motivation determines how much you're willing to do.",
+  "Opportunities don't happen, you create them.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "The future depends on what you do today."
+];
+
+const interviewTips = [
+  "Research the company thoroughly before your interview.",
+  "Practice the STAR method (Situation, Task, Action, Result) for behavioral questions.",
+  "Prepare thoughtful questions to ask the interviewer.",
+  "Follow up with a thank-you email within 24 hours.",
+  "Be ready to discuss your weaknesses as areas for growth."
+];
+
+export default function Home() {
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [timeFrame, setTimeFrame] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quote, setQuote] = useState('');
+  const [dailyTips, setDailyTips] = useState<string[]>([]);
+
+  // Edit State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '' });
+
+  // Export State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportConfig, setExportConfig] = useState({ type: '30d', startDate: '', endDate: '' });
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/jobs');
+      const data = await res.json();
+      setJobs(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(fetchJobs, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const rotateQuote = () => {
+      setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+    };
+
+    // Initial set
+    rotateQuote();
+
+    // Rotate every 45 seconds (slow delay)
+    const interval = setInterval(rotateQuote, 45000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredJobs = jobs.filter(job => {
+    if (timeFrame === 'all') return true;
+    const date = new Date(job.date);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (timeFrame === '7d') return diffDays <= 7;
+    if (timeFrame === '30d') return diffDays <= 30;
+    return true;
+  });
+
+  const appliedCount = filteredJobs.length;
+  const interviewingCount = filteredJobs.filter((j: any) => j.status === 'Interviewing').length;
+
+  // Stats for Dashboard
+  const statusCounts = filteredJobs.reduce((acc: any, job: any) => {
+    const s = job.status || 'Applied';
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
+  const handleExportClick = () => {
+    setIsExportModalOpen(true);
+  };
+
+  const performExport = () => {
+    let jobsToExport = [...jobs];
+    const now = new Date();
+
+    if (exportConfig.type === '7d') {
+      jobsToExport = jobs.filter(j => {
+        const d = new Date(j.date);
+        return (now.getTime() - d.getTime()) / (1000 * 3600 * 24) <= 7;
+      });
+    } else if (exportConfig.type === '30d') {
+      jobsToExport = jobs.filter(j => {
+        const d = new Date(j.date);
+        return (now.getTime() - d.getTime()) / (1000 * 3600 * 24) <= 30;
+      });
+    } else if (exportConfig.type === 'custom') {
+      if (exportConfig.startDate && exportConfig.endDate) {
+        const start = new Date(exportConfig.startDate);
+        const end = new Date(exportConfig.endDate);
+        // End date at end of day
+        end.setHours(23, 59, 59, 999);
+
+        const diffDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24);
+        if (diffDays > 90) {
+          alert('Custom range cannot exceed 90 days.');
+          return;
+        }
+
+        jobsToExport = jobs.filter(j => {
+          const d = new Date(j.date);
+          return d >= start && d <= end;
+        });
+      }
+    }
+
+    const headers = ['Date', 'Role', 'Company', 'Location', 'Salary', 'Type', 'Status', 'URL', 'Notes'];
+    const csvContent = [
+      headers.join(','),
+      ...jobsToExport.map(job => [
+        new Date(job.date).toLocaleDateString(),
+        `"${(job.title || '').replace(/"/g, '""')}"`,
+        `"${(job.company || '').replace(/"/g, '""')}"`,
+        `"${(job.location || '').replace(/"/g, '""')}"`,
+        `"${(job.salary || '').replace(/"/g, '""')}"`,
+        `"${(job.jobType || '').replace(/"/g, '""')}"`,
+        `"${(job.status || 'Applied')}"`,
+        `"${job.url}"`,
+        `"${(job.notes || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `job_tracker_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    setIsExportModalOpen(false);
+  };
+
+  const [draggedJob, setDraggedJob] = useState<any>(null);
+
+  const updateJobStatus = async (job: any, newStatus: string) => {
+    // Optimistic UI Update
+    const updatedJobs = jobs.map(j =>
+      j.url === job.url ? { ...j, status: newStatus } : j
+    );
+    setJobs(updatedJobs);
+
+    // Persist to Backend
+    try {
+      await fetch('/api/sync', { // Using sync to update
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...job, status: newStatus })
+      });
+    } catch (e) {
+      console.error("Failed to update status", e);
+      fetchJobs(); // Revert on error
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, job: any) => {
+    setDraggedJob(job);
+    e.dataTransfer.effectAllowed = "move";
+    // Set a ghost image or data if needed
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, status: string) => {
+    e.preventDefault();
+    if (draggedJob && draggedJob.status !== status) {
+      updateJobStatus(draggedJob, status);
+    }
+    setDraggedJob(null);
+  };
+
+  const handleDeleteJob = async (url: string) => {
+    if (!confirm('Are you sure you want to delete this application?')) return;
+    try {
+      await fetch('/api/jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      fetchJobs();
+    } catch (e) {
+      console.error("Failed to delete", e);
+    }
+  };
+
+  const handleEditClick = (job: any) => {
+    setEditingJob(job);
+
+    let formattedSalary = job.salary || '';
+    if (!formattedSalary) {
+      formattedSalary = '$';
+    } else if (!/[a-zA-Z]/.test(formattedSalary)) {
+      // If pure number (or with $ , .), format it
+      const digits = formattedSalary.replace(/[^\d.]/g, '');
+      if (digits && !isNaN(Number(digits))) {
+        formattedSalary = '$' + Number(digits).toLocaleString();
+      }
+    }
+
+    setEditForm({
+      title: job.title || '',
+      company: job.company || '',
+      status: job.status || 'Applied',
+      salary: formattedSalary,
+      location: job.location || '',
+      notes: job.notes || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingJob) return;
+    try {
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...editingJob, ...editForm })
+      });
+      setIsEditModalOpen(false);
+      setEditingJob(null);
+      fetchJobs();
+    } catch (e) {
+      console.error("Failed to save edit", e);
+    }
+  };
+
+  // --- Views ---
+
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="text-slate-500 text-sm font-medium mb-1">Total Applications</div>
+          <div className="text-3xl font-bold text-slate-800">{appliedCount}</div>
+          <div className="mt-2 text-xs text-green-600 font-medium">+ Updated just now</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-blue-50 to-white">
+          <div className="text-blue-600 text-sm font-medium mb-1">Interviewing</div>
+          <div className="text-3xl font-bold text-blue-900">{statusCounts['Interviewing'] || 0}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-purple-50 to-white">
+          <div className="text-purple-600 text-sm font-medium mb-1">Offers</div>
+          <div className="text-3xl font-bold text-purple-900">{statusCounts['Offer'] || 0}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="text-slate-500 text-sm font-medium mb-1">Rejected</div>
+          <div className="text-3xl font-bold text-slate-400">{statusCounts['Rejected'] || 0}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="font-semibold text-slate-800 mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            {filteredJobs.slice(0, 5).map((job: any, i) => (
+              <div key={i} className="flex items-start gap-3 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+                <div className="w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">Applied to <span className="text-blue-600">{job.title}</span> at {job.company}</p>
+                  <p className="text-xs text-slate-500">{new Date(job.date).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ))}
+            {jobs.length === 0 && <p className="text-sm text-slate-400">No activity yet.</p>}
+          </div>
+        </div>
+
+        {/* Simple Goals / Actions */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="font-semibold text-slate-800 mb-4">Weekly Goals</h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium text-slate-700">Apply to 10 jobs</span>
+                <span className="text-slate-500">{Math.min(appliedCount, 10)}/10</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min((appliedCount / 10) * 100, 100)}%` }}></div>
+              </div>
+            </div>
+            <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+              <h4 className="text-orange-800 text-sm font-semibold mb-1">Tip of the day</h4>
+              <p className="text-orange-700 text-xs">Tailor your resume keywords to the job description to pass ATS filters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Motivation Section - Centered, Minimalist */}
+      {/* Motivation Section - Centered, Minimalist */}
+      <div className="flex justify-center mt-32 mb-12">
+        <div className="max-w-3xl text-center px-6">
+          <p className="text-3xl text-slate-900 font-serif italic leading-relaxed mb-6">
+            "{quote}"
+          </p>
+          <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 opacity-60">
+            <Icon name="bulb" className="w-4 h-4" /> Daily Inspiration
+          </h3>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderApplications = () => (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 className="font-semibold text-slate-800">All Applications</h3>
+        <div className="text-sm text-slate-500">{filteredJobs.length} total</div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-white text-slate-500 font-medium border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3">Role</th>
+              <th className="px-6 py-3">Company</th>
+              <th className="px-6 py-3">Location</th>
+              <th className="px-6 py-3">Salary</th>
+              <th className="px-6 py-3">Applied Date</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredJobs.filter(j => j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase())).map((job: any, index: number) => (
+              <tr key={index} className="hover:bg-slate-50 transition-colors group">
+                <td className="px-6 py-4 font-medium text-slate-900">
+                  <a href={job.url} target="_blank" className="hover:text-blue-600 hover:underline flex items-center gap-2">
+                    {job.title}
+                  </a>
+                </td>
+                <td className="px-6 py-4 text-slate-600 font-medium">{job.company}</td>
+                <td className="px-6 py-4 text-slate-500">{job.location}</td>
+                <td className="px-6 py-4 text-slate-500">{job.salary || '-'}</td>
+                <td className="px-6 py-4 text-slate-500">
+                  {new Date(job.date).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                        ${job.status === 'Interviewing' ? 'bg-purple-100 text-purple-800' :
+                      job.status === 'Offer' ? 'bg-green-100 text-green-800' :
+                        job.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-blue-100 text-blue-800'}`}>
+                    {job.status || 'Applied'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleEditClick(job)}
+                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded hover:bg-slate-100"
+                      title="Edit"
+                    >
+                      <Icon name="edit" className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteJob(job.url)}
+                      className="p-1 text-slate-400 hover:text-red-600 transition-colors rounded hover:bg-slate-100"
+                      title="Delete"
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderPipeline = () => {
+    const columns = ['Applied', 'Interviewing', 'Offer', 'Rejected'];
+
+    const getColumnStyles = (status: string) => {
+      switch (status) {
+        case 'Applied': return 'bg-blue-50/80 border-blue-100';
+        case 'Interviewing': return 'bg-purple-50/80 border-purple-100';
+        case 'Offer': return 'bg-emerald-50/80 border-emerald-100';
+        case 'Rejected': return 'bg-slate-100/80 border-slate-200';
+        default: return 'bg-slate-50 border-slate-100';
+      }
+    };
+
+    const getHeaderStyles = (status: string) => {
+      switch (status) {
+        case 'Applied': return 'text-blue-700 bg-blue-100';
+        case 'Interviewing': return 'text-purple-700 bg-purple-100';
+        case 'Offer': return 'text-emerald-700 bg-emerald-100';
+        case 'Rejected': return 'text-slate-600 bg-slate-200';
+        default: return 'text-slate-600 bg-slate-100';
+      }
+    };
+
+    return (
+      <div className="flex gap-6 overflow-x-auto pb-4 h-full">
+        {columns.map(status => (
+          <div
+            key={status}
+            className={`min-w-[280px] w-full rounded-xl p-4 flex flex-col h-full border ${getColumnStyles(status)} transition-colors`}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, status)}
+          >
+            <div className="flex justify-between items-center mb-4 select-none">
+              <h4 className={`font-bold text-sm uppercase tracking-wide ${getHeaderStyles(status).split(' ')[0]}`}>{status}</h4>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getHeaderStyles(status)}`}>{statusCounts[status] || 0}</span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-[200px]">
+              {filteredJobs.filter((j: any) => (j.status || 'Applied') === status).map((job: any, i) => (
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, job)}
+                  className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-semibold text-slate-800 leading-snug">{job.title}</h5>
+                    <button onClick={() => handleDeleteJob(job.url)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1">
+                      <Icon name="trash" className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-3 font-medium">{job.company}</p>
+
+                  <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                      {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                    {job.salary && <span className="text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded">{job.salary.replace(/.*(\$[\d,]+k?).*/i, '$1')}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
+        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">T</div>
+          <span className="font-bold text-lg text-slate-800">Trackr</span>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-1">
+          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="dashboard" className="w-5 h-5" />
+            Dashboard
+          </button>
+          <button onClick={() => setActiveTab('applications')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'applications' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="briefcase" className="w-5 h-5" />
+            Applications
+          </button>
+          <button onClick={() => setActiveTab('pipeline')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pipeline' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="pipeline" className="w-5 h-5" />
+            Pipeline
+          </button>
+        </nav>
+
+        <div className="px-4 pb-4">
+          <a href="#" target="_blank" className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200 bg-slate-50/50">
+            <Icon name="download" className="w-5 h-5 text-slate-400" />
+            Get Extension
+          </a>
+        </div>
+
+        <div className="p-4 border-t border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold bg-gradient-to-br from-slate-100 to-slate-200">U</div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">User</span>
+              <span className="text-xs text-slate-500">Free Plan</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+          <h2 className="font-semibold text-lg capitalize">{activeTab}</h2>
+          <div className="flex items-center gap-4">
+            <select
+              value={timeFrame}
+              onChange={(e) => setTimeFrame(e.target.value)}
+              className="bg-slate-100 border-none text-sm font-medium text-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+            >
+              <option value="all">All Time</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="7d">Last 7 Days</option>
+            </select>
+            {activeTab === 'applications' && (
+              <button onClick={handleExportClick} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                Export CSV
+              </button>
+            )}
+            <button onClick={fetchJobs} className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+              <Icon name="refresh" className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <div className="w-64 relative hidden sm:block">
+              <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search saved jobs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'applications' && renderApplications()}
+          {activeTab === 'pipeline' && renderPipeline()}
+        </div>
+      </main>
+
+      {/* Edit Modal */}
+      {
+        isEditModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.company}
+                    onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                    <select
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    >
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Salary</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.salary}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const raw = val.replace(/[$,]/g, '').trim();
+                        // If number, format it
+                        if (!isNaN(Number(raw)) && raw !== '') {
+                          // Handle decimal typing edge case if needed, but simple toLocaleString is usually enough for salaries
+                          setEditForm({ ...editForm, salary: '$' + Number(raw).toLocaleString() });
+                        } else {
+                          // If empty/cleared, force $
+                          if (val === '' || val === '$') setEditForm({ ...editForm, salary: '$' });
+                          else setEditForm({ ...editForm, salary: val });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                  <textarea
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    placeholder="Add your notes here..."
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Icon name="check" className="w-4 h-4" /> Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-lg text-slate-800">Export Options</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <Icon name="x" className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="exportType"
+                    checked={exportConfig.type === '7d'}
+                    onChange={() => setExportConfig({ ...exportConfig, type: '7d' })}
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Last 7 Days</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="exportType"
+                    checked={exportConfig.type === '30d'}
+                    onChange={() => setExportConfig({ ...exportConfig, type: '30d' })}
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Last 30 Days</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="exportType"
+                    checked={exportConfig.type === 'custom'}
+                    onChange={() => setExportConfig({ ...exportConfig, type: 'custom' })}
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Custom Range (Max 90 days)</span>
+                </label>
+              </div>
+
+              {exportConfig.type === 'custom' && (
+                <div className="grid grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={exportConfig.startDate}
+                      onChange={(e) => setExportConfig({ ...exportConfig, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">End Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={exportConfig.endDate}
+                      onChange={(e) => setExportConfig({ ...exportConfig, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setIsExportModalOpen(false)}
+                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performExport}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                Download CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
