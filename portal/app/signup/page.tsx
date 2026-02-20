@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirebaseAuth } from '../../lib/firebase';
 
@@ -97,22 +98,63 @@ export default function SignupPage() {
                             Master your <span className="text-blue-400">career</span> journey.
                         </h1>
 
-                        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-                            <div className="flex items-start gap-4">
-                                <div className="mt-1 w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
-                                    <svg className="w-3.5 h-3.5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+                            <div className="flex items-start gap-5">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                    <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <p className="text-lg text-white/90 font-medium">Centralized dashboard for all applications</p>
+                                <div>
+                                    <p className="text-xl text-white font-bold leading-tight">Track from Anywhere</p>
+                                    <p className="text-white/70 text-sm mt-1">Instantly save jobs from LinkedIn, Indeed, and Google with one click.</p>
+                                </div>
                             </div>
-                            <div className="flex items-start gap-4">
-                                <div className="mt-1 w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
-                                    <svg className="w-3.5 h-3.5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                            <div className="flex items-start gap-5">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                    <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <p className="text-lg text-white/90 font-medium">Automated follow-ups and tracking</p>
+                                <div>
+                                    <p className="text-xl text-white font-bold leading-tight">Visualize Your Future</p>
+                                    <p className="text-white/70 text-sm mt-1">Turn application chaos into a professional Kanban pipeline.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-5">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                    <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-xl text-white font-bold leading-tight">Synced everywhere, always secure</p>
+                                    <p className="text-white/70 text-sm mt-1">Your data, perfectly synced and encrypted across all your devices.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Lottie Animation & Portal Logos */}
+                        <div className="mt-12 flex items-center gap-8 animate-in fade-in duration-1000 delay-500">
+                            <div className="w-24 h-24 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 flex items-center justify-center overflow-hidden">
+                                <Script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module" />
+                                {/* @ts-ignore */}
+                                <dotlottie-player
+                                    src="https://lottie.host/8e21a8c3-784d-4581-9b16-621817799042/3w1u6WvC3e.json"
+                                    background="transparent"
+                                    speed="1"
+                                    style={{ width: '100px', height: '100px' }}
+                                    loop
+                                    autoplay
+                                />
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Supports all major platforms</p>
+                                <div className="flex items-center gap-4 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/01/LinkedIn_Logo.svg" className="h-5 invert" alt="LinkedIn" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Indeed_logo.svg" className="h-4 invert" alt="Indeed" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" className="h-4 invert" alt="Google" />
+                                </div>
                             </div>
                         </div>
                     </div>
