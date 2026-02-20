@@ -74,16 +74,16 @@ export default function SignupPage() {
     return (
         <div className="w-full min-h-screen bg-neutral-50 flex flex-col lg:flex-row font-sans selection:bg-blue-100 overflow-x-hidden">
             {/* Left Side: Background & Branding */}
-            <div className="relative w-full lg:w-[55%] min-h-[400px] lg:h-screen overflow-hidden">
+            <div className="relative w-full lg:w-[55%] lg:h-screen overflow-hidden flex flex-col">
                 <img
                     src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2574&auto=format&fit=crop"
                     alt="Workspace"
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/95 via-blue-900/40 to-transparent"></div>
 
                 {/* Logo */}
-                <div className="absolute top-8 left-8 lg:top-12 lg:left-12 z-20 flex items-center gap-3">
+                <div className="relative z-20 flex items-center gap-3 p-8 lg:p-0 lg:absolute lg:top-12 lg:left-12">
                     <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
                         <span className="text-white font-bold text-xl heading-font">T</span>
                     </div>
@@ -91,7 +91,7 @@ export default function SignupPage() {
                 </div>
 
                 {/* Content */}
-                <div className="absolute bottom-12 left-8 right-8 lg:bottom-16 lg:left-12 lg:right-12 z-20">
+                <div className="relative z-20 mt-auto p-8 pt-24 lg:p-0 lg:absolute lg:bottom-16 lg:left-12 lg:right-12">
                     <div className="max-w-xl">
                         <h1 className="text-4xl lg:text-7xl font-extrabold text-white leading-[1.05] mb-8 tracking-tight heading-font animate-in fade-in slide-in-from-bottom-4 duration-700">
                             Master your <span className="text-blue-400">career</span> journey.
