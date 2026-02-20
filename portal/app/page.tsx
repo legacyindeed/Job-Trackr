@@ -330,55 +330,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Daily Goal Bar */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="font-bold text-slate-800">Daily Goal</h3>
-            <p className="text-xs text-slate-500">Track {dailyGoal} positions today to stay on track</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <span className="text-2xl font-black text-blue-600">{todayJobs}</span>
-              <span className="text-slate-300 mx-1">/</span>
-              <span className="text-lg font-bold text-slate-400">{dailyGoal}</span>
-            </div>
-            <button
-              onClick={() => setShowGoalEdit(!showGoalEdit)}
-              className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
-            >
-              <Icon name="edit" className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
 
-        {showGoalEdit && (
-          <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <span className="text-sm font-medium text-slate-600">Set new daily goal:</span>
-            <input
-              type="range" min="1" max="20"
-              value={dailyGoal}
-              onChange={(e) => handleGoalChange(parseInt(e.target.value))}
-              className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <span className="font-bold text-blue-600 w-8">{dailyGoal}</span>
-          </div>
-        )}
-
-        <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-          <div
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-1000 ease-out flex items-center justify-end px-2"
-            style={{ width: `${goalProgress}%` }}
-          >
-            {goalProgress > 15 && <div className="w-1 h-1 bg-white/40 rounded-full"></div>}
-          </div>
-          {goalProgress >= 100 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-md">Daily Goal Completed! 🚀</span>
-            </div>
-          )}
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -425,6 +377,49 @@ export default function Home() {
             <p className="text-sm text-slate-600 leading-relaxed font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
               {interviewTips[Math.floor(new Date().getDate() % interviewTips.length)]}
             </p>
+          </div>
+
+          {/* Daily Goal Bar */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-sm font-medium text-slate-800">Daily Goal</h3>
+                <p className="text-[10px] text-slate-500">Track {dailyGoal} positions today</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-lg font-black text-blue-600">{todayJobs}</span>
+                  <span className="text-slate-300 mx-1">/</span>
+                  <span className="text-sm font-bold text-slate-400">{dailyGoal}</span>
+                </div>
+                <button
+                  onClick={() => setShowGoalEdit(!showGoalEdit)}
+                  className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+                >
+                  <Icon name="edit" className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {showGoalEdit && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <input
+                  type="range" min="1" max="20"
+                  value={dailyGoal}
+                  onChange={(e) => handleGoalChange(parseInt(e.target.value))}
+                  className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <span className="text-xs font-bold text-blue-600 w-6">{dailyGoal}</span>
+              </div>
+            )}
+
+            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-1000 ease-out"
+                style={{ width: `${goalProgress}%` }}
+              >
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -664,8 +659,8 @@ export default function Home() {
               <div className="w-px h-6 bg-slate-200" />
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-800">{user?.displayName?.split(' ')[0] || 'User'}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                  <p className="text-sm font-medium text-slate-800">{user?.displayName?.split(' ')[0] || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
                     {user?.email ? (
                       user.email.replace(/(.{1,2})(.*)(@.*)/, '$1***$3')
                     ) : '***@***.***'}
