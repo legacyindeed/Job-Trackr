@@ -19,8 +19,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
 
-    // 2. Sync to Local Portal (New)
-    fetch('http://localhost:3000/api/sync', {
+    // 2. Sync to Portal (Production)
+    fetch('https://job-trackr-ten.vercel.app/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request.job)
