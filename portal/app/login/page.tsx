@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SignupPage() {
-    const [name, setName] = useState('');
+export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -17,25 +17,19 @@ export default function SignupPage() {
         setLoading(true);
         setError('');
 
-        try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
-            });
+        const res = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+        });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'Something went wrong');
-            }
-
-            router.push('/login');
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
+        if (res?.error) {
+            setError('Invalid email or password');
+        } else {
+            router.push('/');
+            router.refresh();
         }
+        setLoading(false);
     };
 
     return (
@@ -43,8 +37,8 @@ export default function SignupPage() {
             <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
                 <div className="text-center mb-10">
                     <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-lg shadow-blue-200">T</div>
-                    <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-                    <p className="text-slate-500 mt-2">Start tracking your dream career today</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
+                    <p className="text-slate-500 mt-2">Log in to track your job applications</p>
                 </div>
 
                 {error && (
@@ -55,17 +49,6 @@ export default function SignupPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Full Name</label>
-                        <input
-                            type="text"
-                            required
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                            placeholder="John Doe"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                    </div>
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
                         <input
@@ -94,14 +77,14 @@ export default function SignupPage() {
                         disabled={loading}
                         className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 mt-4"
                     >
-                        {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Create Account'}
+                        {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Log In'}
                     </button>
                 </form>
 
                 <div className="mt-8 text-center">
                     <p className="text-slate-500 text-sm">
-                        Already have an account?{' '}
-                        <Link href="/login" className="text-blue-600 font-bold hover:underline">Log in here</Link>
+                        Don't have an account?{' '}
+                        <Link href="/signup" className="text-blue-600 font-bold hover:underline">Sign up for free</Link>
                     </p>
                 </div>
             </div>

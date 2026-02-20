@@ -23,13 +23,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     fetch('https://job-trackr-ten.vercel.app/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(request.job)
     })
       .then(response => {
         if (!response.ok) throw new Error('Portal API failed');
-        console.log('Synced successfully to Local Portal');
+        console.log('Synced successfully to Portal');
       })
-      .catch(err => console.error('Error syncing to portal. Is it running?', err));
+      .catch(err => console.error('Error syncing to portal. Are you logged in?', err));
   }
 });
 

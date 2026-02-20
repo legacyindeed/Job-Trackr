@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
 // Icons as a component
 const Icon = ({ name, className }: { name: string; className?: string }) => {
   switch (name) {
     case 'dashboard': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
+    case 'logout': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
     case 'briefcase': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
     case 'search': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
     case 'refresh': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
@@ -37,6 +39,7 @@ const interviewTips = [
 ];
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -55,9 +58,14 @@ export default function Home() {
   const [exportConfig, setExportConfig] = useState({ type: '30d', startDate: '', endDate: '' });
 
   const fetchJobs = async () => {
+    if (status !== 'authenticated') return;
     setLoading(true);
     try {
       const res = await fetch('/api/jobs');
+      if (res.status === 401) {
+        signOut();
+        return;
+      }
       const data = await res.json();
       setJobs(data);
     } catch (e) {
@@ -68,10 +76,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    if (status === 'authenticated') {
+      fetchJobs();
+      const interval = setInterval(fetchJobs, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [status]);
 
   useEffect(() => {
     const rotateQuote = () => {
@@ -507,6 +517,14 @@ export default function Home() {
     </div>
   );
 
+  if (status === 'loading') {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 pb-16 md:pb-0">
 
@@ -539,13 +557,24 @@ export default function Home() {
           </a>
         </div>
 
-        <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold bg-gradient-to-br from-slate-100 to-slate-200">U</div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">User</span>
-              <span className="text-xs text-slate-500">Free Plan</span>
+        <div className="p-4 border-t border-slate-100 mt-auto">
+          <div className="flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                {session?.user?.name?.[0] || 'U'}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-slate-800 truncate max-w-[100px]">{session?.user?.name || 'User'}</span>
+                <span className="text-xs text-slate-500">Free Plan</span>
+              </div>
             </div>
+            <button
+              onClick={() => signOut()}
+              className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+              title="Log Out"
+            >
+              <Icon name="logout" className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </aside>
