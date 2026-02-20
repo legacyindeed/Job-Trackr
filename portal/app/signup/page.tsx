@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { getFirebaseAuth } from '../../lib/firebase';
 
 export default function SignupPage() {
     const [name, setName] = useState('');
@@ -20,6 +20,8 @@ export default function SignupPage() {
         setError('');
 
         try {
+            const auth = getFirebaseAuth();
+            if (!auth) throw new Error("Firebase not initialized");
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 

@@ -10,25 +10,24 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
+let app: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
 
-if (typeof window !== "undefined") {
-    // Client-side initialization
-    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    auth = getAuth(app);
-} else {
-    // Server-side / Build-time dummy or lazy initialization
-    // We initialize it anyway because some hooks might call it, 
-    // but the actual usage will fail safely or be skipped
+export function getFirebaseAuth(): Auth | null {
+    if (typeof window === "undefined") return null;
+
+    if (authInstance) return authInstance;
+
+    if (!firebaseConfig.apiKey) {
+        return null;
+    }
+
     try {
         app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-        auth = getAuth(app);
-    } catch (e) {
-        // Fallback for build time without keys
-        app = {} as FirebaseApp;
-        auth = {} as Auth;
+        authInstance = getAuth(app);
+        return authInstance;
+    } catch (error) {
+        console.error("Firebase Auth initialization failed:", error);
+        return null;
     }
 }
-
-export { auth };

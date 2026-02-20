@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
-import { auth as firebaseAuth } from '../lib/firebase';
+import { getFirebaseAuth } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 
 // Icons as a component
@@ -72,7 +72,8 @@ export default function Home() {
         }
       });
       if (res.status === 401) {
-        await firebaseAuth.signOut();
+        const auth = getFirebaseAuth();
+        if (auth) await signOut(auth);
         router.push('/login');
         return;
       }
@@ -585,7 +586,10 @@ export default function Home() {
               </div>
             </div>
             <button
-              onClick={() => signOut(firebaseAuth)}
+              onClick={async () => {
+                const auth = getFirebaseAuth();
+                if (auth) await signOut(auth);
+              }}
               className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
               title="Log Out"
             >

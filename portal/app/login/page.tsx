@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { getFirebaseAuth } from '../../lib/firebase';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -19,6 +19,8 @@ export default function LoginPage() {
         setError('');
 
         try {
+            const auth = getFirebaseAuth();
+            if (!auth) throw new Error("Firebase not initialized");
             await signInWithEmailAndPassword(auth, email, password);
             router.push('/');
         } catch (err: any) {
