@@ -84,10 +84,10 @@ export default function SignupPage() {
 
                 {/* Logo */}
                 <div className="absolute top-8 left-8 lg:top-12 lg:left-12 z-20 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
-                        <span className="text-blue-600 font-bold text-xl heading-font">J</span>
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
+                        <span className="text-white font-bold text-xl heading-font">T</span>
                     </div>
-                    <span className="text-white font-bold text-xl tracking-tight heading-font">JobTrackr</span>
+                    <span className="text-white font-bold text-xl tracking-tight heading-font">Trackr</span>
                 </div>
 
                 {/* Content */}
@@ -179,7 +179,7 @@ export default function SignupPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 px-6 rounded-xl transition-all duration-300 flex items-center justify-between group mt-4 shadow-lg shadow-blue-200 disabled:opacity-70 disabled:hover:bg-blue-600 active:scale-[0.98]"
+                            className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-between group mt-4 shadow-xl shadow-slate-200 disabled:opacity-70 disabled:hover:bg-slate-900 active:scale-[0.98]"
                         >
                             <span className="text-lg">
                                 {loading ? 'Creating Account...' : 'Get Started'}
