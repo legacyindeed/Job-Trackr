@@ -504,7 +504,7 @@ function DashboardContent() {
   );
 
   const renderApplications = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Job Pipeline</h2>
@@ -524,8 +524,8 @@ function DashboardContent() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-left">
+      <div className="bg-white rounded-xl sm:rounded-xl rounded-none shadow-sm border border-slate-200 overflow-x-auto -mx-4 sm:mx-0">
+        <table className="w-full text-left min-w-[700px]">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Job Details</th>
@@ -720,7 +720,7 @@ function DashboardContent() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Header */}
         <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
           <div className="px-8 h-20 flex items-center justify-between">
