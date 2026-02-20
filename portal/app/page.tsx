@@ -103,6 +103,20 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
+      // One-time check to link any jobs tracked before authentication
+      const claimJobs = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          await fetch('/api/claim-jobs', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          fetchJobs(); // Refresh jobs after claiming
+        } catch (e) {
+          console.error("Claim failed", e);
+        }
+      };
+
+      claimJobs();
       fetchJobs();
       const interval = setInterval(fetchJobs, 10000);
       return () => clearInterval(interval);
