@@ -419,9 +419,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Motivational Quote at bottom middle */}
-      <div className="mt-12 mb-8 flex justify-center">
-        <p className="text-sm italic text-slate-800 font-medium">"{quote}"</p>
+      <div className="mt-16 mb-12 flex justify-center px-8 text-center">
+        <p className="text-xl italic text-slate-800 font-medium max-w-2xl leading-relaxed">
+          "{quote}"
+        </p>
       </div>
     </div>
   );
