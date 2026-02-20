@@ -18,7 +18,7 @@ export default function LoginPage() {
         setError('');
         try {
             const auth = getFirebaseAuth();
-            if (!auth) throw new Error("Firebase not initialized");
+            if (!auth) throw new Error("Firebase configuration is missing. Please check your NEXT_PUBLIC_FIREBASE_... environment variables in Vercel.");
             const provider = new GoogleAuthProvider();
             const userCredential = await signInWithPopup(auth, provider);
             const user = userCredential.user;
@@ -48,7 +48,7 @@ export default function LoginPage() {
 
         try {
             const auth = getFirebaseAuth();
-            if (!auth) throw new Error("Firebase not initialized");
+            if (!auth) throw new Error("Firebase configuration is missing. Please check your NEXT_PUBLIC_FIREBASE_... environment variables in Vercel.");
             await signInWithEmailAndPassword(auth, email, password);
             router.push('/');
         } catch (err: any) {

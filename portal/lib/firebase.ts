@@ -18,7 +18,9 @@ export function getFirebaseAuth(): Auth | null {
 
     if (authInstance) return authInstance;
 
-    if (!firebaseConfig.apiKey) {
+    // Check if configuration is present
+    if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
+        console.error("Firebase Configuration Missing: NEXT_PUBLIC_FIREBASE_API_KEY is not set.");
         return null;
     }
 
