@@ -15,6 +15,9 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Trackr",
   description: "Your ultimate job application tracking dashboard.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 import { AuthProvider } from "../context/AuthContext";
