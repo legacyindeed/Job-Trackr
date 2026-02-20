@@ -128,7 +128,7 @@ export async function GET() {
           ${url}, 
           ${status}, 
           ${jobType}, 
-          ${date ? new Date(date) : new Date()}, 
+          ${date ? new Date(date).toISOString() : new Date().toISOString()}, 
           NOW()
         )
         ON CONFLICT (url) DO NOTHING;
