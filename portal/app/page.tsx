@@ -72,9 +72,16 @@ export default function Home() {
         }
       });
       if (res.status === 401) {
-        const auth = getFirebaseAuth();
-        if (auth) await signOut(auth);
-        router.push('/login');
+        // Only sign out if it's a genuine 401 (not a 500 configuration error)
+        const data = await res.json().catch(() => ({}));
+        if (data.error === 'Unauthorized') {
+          const auth = getFirebaseAuth();
+          if (auth) await signOut(auth);
+          router.push('/login');
+          return;
+        }
+        console.error('Server side auth error:', data.error);
+        setLoading(false); // Stop loading if it's a 401 but not an unauthorized sign-out
         return;
       }
       const data = await res.json();

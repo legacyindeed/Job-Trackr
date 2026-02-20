@@ -11,18 +11,22 @@ async function getUserId(request: Request) {
     const idToken = authHeader.split('Bearer ')[1];
     try {
         const decodedToken = await adminAuth.verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error('Error verifying token:', error);
-        return null;
+        return { uid: decodedToken.uid };
+    } catch (error: any) {
+        if (error.message?.includes("SERVER_CONFIG_ERROR")) {
+            return { error: 'Server configuration error', status: 500 };
+        }
+        return { error: 'Invalid token', status: 401 };
     }
 }
 
 export async function GET(request: Request) {
-    const userId = await getUserId(request);
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await getUserId(request);
+    if ('error' in (authResult as any)) {
+        const res = authResult as { error: string, status: number };
+        return NextResponse.json({ error: res.error }, { status: res.status });
     }
+    const userId = (authResult as { uid: string }).uid;
 
     try {
         const { rows } = await sql`

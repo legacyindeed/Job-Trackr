@@ -5,10 +5,21 @@ function getAdminApp() {
 
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    // Vercel handles newlines differently. We try to normalize them.
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
         return null;
+    }
+
+    // Fix for Vercel/Node private key formatting
+    if (privateKey.includes('\\n')) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
+    // Ensure it has the correct BEGIN/END blocks if they were stripped
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
     }
 
     try {
@@ -16,7 +27,7 @@ function getAdminApp() {
             credential: admin.credential.cert({
                 projectId,
                 clientEmail,
-                privateKey: privateKey.replace(/\\n/g, '\n'),
+                privateKey,
             }),
         });
     } catch (error) {
@@ -29,8 +40,14 @@ export const adminAuth = {
     verifyIdToken: async (token: string) => {
         const app = getAdminApp();
         if (!app) {
-            throw new Error("Firebase Admin SDK not initialized. Check your environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).");
+            console.error("Firebase Admin SDK failed to initialize. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.");
+            throw new Error("SERVER_CONFIG_ERROR: Firebase Admin SDK not initialized.");
         }
-        return admin.auth(app).verifyIdToken(token);
+        try {
+            return await admin.auth(app).verifyIdToken(token);
+        } catch (error: any) {
+            console.error("Token verification failed:", error.message);
+            throw error;
+        }
     }
 };
