@@ -1,22 +1,29 @@
-# Job Tracker Chrome Extension
+# Trackr: The Intelligent Job Application Suite
 
-A simple Chrome Extension that automatically detects when you are visiting a job application page and prompts you to track it.
+Trackr is a dual-platform solution designed to automate and simplify your job search journey.
 
-## Features
-- **Automatic Detection**: Recognizes popular job sites (LinkedIn, Indeed, Glassdoor, etc.) and pages with "job" or "career" in the URL.
-- **One-Click Tracking**: When a job is detected, a small overlay asks if you want to track it.
-- **Dashboard**: Click the extension icon to view all your saved jobs.
-- **Export**: Export your job list to CSV.
+## 🚀 The Ecosystem
 
-## Installation
-1. Open Google Chrome.
-2. Navigate to `chrome://extensions/` in the address bar.
-3. Toggle **Developer mode** on (top right corner).
-4. Click **Load unpacked**.
-5. Select this folder (`Job Tracker`).
+### 💻 Trackr Portal (Public)
+**URL:** [https://job-trackr-ten.vercel.app](https://job-trackr-ten.vercel.app)
+The central command center for your career journey. Open to everyone, the portal allows you to:
+- Visualize your job pipeline (Kanban board).
+- Manage applications, interviews, and offers.
+- Export your data for personal records.
+- **Manual Entry**: No extension? No problem. Add applications directly through our web interface.
 
-## Usage
-1. Browse job sites like LinkedIn or Indeed.
-2. When you open a job posting, a "Job Application Detected" popup will appear in the bottom right.
-3. Click "Yes, Track This" to save the job.
-4. Click the extension icon in your toolbar to see your tracked jobs.
+### 🧩 Trackr Chrome Extension (Private)
+*Note: This extension is currently in private development and not available on the Chrome Web Store.*
+The extension acts as a background assistant that:
+- **Automatic Detection**: Recognizes job postings on LinkedIn, Indeed, and Google.
+- **Instant Sync**: One-click tracking that jumps directly into your public portal.
+- **Local Cache**: Maintains a recent history of tracked applications.
+
+## 🛠 Installation (Development Only)
+1. Clone this repository.
+2. Open Chrome and navigate to `chrome://extensions/`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the root directory of this project.
+
+## 🛡 Security & Privacy
+Trackr uses Firebase for secure authentication and Vercel Postgres for encrypted data storage. Your job search data is yours alone.

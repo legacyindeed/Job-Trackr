@@ -50,6 +50,52 @@ export async function GET(request: Request) {
     }
 }
 
+export async function POST(request: Request) {
+    const authResult = await getUserId(request);
+    if ('error' in authResult) {
+        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    const userId = authResult.uid;
+
+    try {
+        const job = await request.json();
+
+        let { title, company, location, salary, url, status = 'Applied', jobType } = job;
+
+        if (!title || !company) {
+            return NextResponse.json({ error: 'Title and Company are required' }, { status: 400 });
+        }
+
+        // Clean title
+        const prefixes = ['Job Application for', 'Application for', 'Apply for', 'Job Application', 'Application', 'Apply', 'Careers at'];
+        const prefixPattern = new RegExp(`^(${prefixes.join('|')})\\s+`, 'i');
+        title = title.replace(prefixPattern, '').trim();
+
+        // If no URL (manual entry), generate a unique one
+        if (!url) {
+            url = `manual-${userId}-${Date.now()}`;
+        }
+
+        await sql`
+            INSERT INTO jobs (title, company, location, salary, url, status, job_type, user_id, updated_at)
+            VALUES (${title}, ${company}, ${location}, ${salary}, ${url}, ${status}, ${jobType}, ${userId}, NOW())
+            ON CONFLICT (url) DO UPDATE
+            SET 
+                title = EXCLUDED.title,
+                company = EXCLUDED.company,
+                location = EXCLUDED.location,
+                salary = EXCLUDED.salary,
+                status = EXCLUDED.status,
+                job_type = EXCLUDED.job_type,
+                updated_at = NOW();
+        `;
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        return NextResponse.json({ error }, { status: 500 });
+    }
+}
+
 export async function DELETE(request: Request) {
     const authResult = await getUserId(request);
     if ('error' in authResult) {
