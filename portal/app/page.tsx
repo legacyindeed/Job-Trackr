@@ -181,6 +181,7 @@ export default function Home() {
 
   const handleDrop = async (e: any, newStatus: string) => {
     e.preventDefault();
+    if (!user) return;
     const url = e.dataTransfer.getData('jobUrl');
     const job = jobs.find(j => j.url === url);
     if (!job || job.status === newStatus) return;
