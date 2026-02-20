@@ -5,24 +5,27 @@ import { adminAuth } from '../../../lib/firebase-admin';
 async function getUserId(request: Request) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
+        return { error: 'Missing Authorization header', status: 401 };
     }
 
     const idToken = authHeader.split('Bearer ')[1];
     try {
         const decodedToken = await adminAuth.verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error('Error verifying token:', error);
-        return null;
+        return { uid: decodedToken.uid };
+    } catch (error: any) {
+        if (error.message?.includes("SERVER_CONFIG_ERROR")) {
+            return { error: 'Server configuration error', status: 500 };
+        }
+        return { error: 'Invalid token', status: 401 };
     }
 }
 
 export async function POST(request: Request) {
-    const userId = await getUserId(request);
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await getUserId(request);
+    if ('error' in authResult) {
+        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
+    const userId = authResult.uid;
 
     try {
         const job = await request.json();

@@ -5,7 +5,7 @@ import { adminAuth } from '../../../lib/firebase-admin';
 async function getUserId(request: Request) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
+        return { error: 'Missing Authorization header', status: 401 };
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -22,11 +22,10 @@ async function getUserId(request: Request) {
 
 export async function GET(request: Request) {
     const authResult = await getUserId(request);
-    if ('error' in (authResult as any)) {
-        const res = authResult as { error: string, status: number };
-        return NextResponse.json({ error: res.error }, { status: res.status });
+    if ('error' in authResult) {
+        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
-    const userId = (authResult as { uid: string }).uid;
+    const userId = authResult.uid;
 
     try {
         const { rows } = await sql`
@@ -52,10 +51,11 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-    const userId = await getUserId(request);
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await getUserId(request);
+    if ('error' in authResult) {
+        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
+    const userId = authResult.uid;
 
     try {
         const { url } = await request.json();

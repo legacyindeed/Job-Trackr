@@ -10,10 +10,15 @@ export async function POST(request: Request) {
         }
 
         const idToken = authHeader.split('Bearer ')[1];
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-        const uid = decodedToken.uid;
+        let uid: string;
 
-        if (!uid) {
+        try {
+            const decodedToken = await adminAuth.verifyIdToken(idToken);
+            uid = decodedToken.uid;
+        } catch (error: any) {
+            if (error.message?.includes("SERVER_CONFIG_ERROR")) {
+                return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+            }
             return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
 
@@ -23,7 +28,6 @@ export async function POST(request: Request) {
 
         if (orphanCount > 0) {
             // Check how many users have already "claimed" jobs (or just if any user exists in a tracking table)
-            // For simplicity, let's say the first user TO ONBOARD claims all orphans.
             const userWithJobs = await sql`SELECT count(DISTINCT user_id) FROM jobs WHERE user_id IS NOT NULL`;
             const userCount = parseInt(userWithJobs.rows[0].count);
 
