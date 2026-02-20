@@ -362,12 +362,7 @@ export default function Home() {
 
         {/* Motivational Quote & Tips */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-lg p-8 text-white relative overflow-hidden group">
-            <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
-            <Icon name="bulb" className="w-10 h-10 mb-4 opacity-50" />
-            <p className="text-xl font-medium leading-relaxed mb-4 relative z-10">"{quote}"</p>
-            <div className="h-1 w-12 bg-white/30 rounded-full"></div>
-          </div>
+
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -422,6 +417,11 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Motivational Quote at bottom middle */}
+      <div className="mt-12 mb-8 flex justify-center">
+        <p className="text-sm italic text-slate-800 font-medium">"{quote}"</p>
       </div>
     </div>
   );
