@@ -767,7 +767,7 @@ function DashboardContent() {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
@@ -1072,7 +1072,7 @@ function DashboardContent() {
       {activeTab === 'applications' && (
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center z-40 active:scale-90 transition-transform"
+          className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center z-40 active:scale-90 transition-transform"
         >
           <Icon name="plus" className="w-6 h-6" />
         </button>
