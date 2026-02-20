@@ -3,7 +3,21 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
     try {
-        const { rows } = await sql`SELECT * FROM jobs ORDER BY id DESC;`;
+        const { rows } = await sql`
+            SELECT 
+                id, 
+                title, 
+                company, 
+                location, 
+                salary, 
+                url, 
+                status, 
+                job_type as "jobType", 
+                created_at as "date", 
+                updated_at as "updatedAt"
+            FROM jobs 
+            ORDER BY id DESC;
+        `;
         return NextResponse.json(rows);
     } catch (error) {
         return NextResponse.json({ error }, { status: 500 });
