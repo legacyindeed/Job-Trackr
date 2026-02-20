@@ -99,7 +99,7 @@ export default function SignupPage() {
 
                         <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                             <div className="flex items-start gap-5">
-                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex flex-shrink-0 items-center justify-center border border-blue-400/30 shadow-inner">
                                     <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
@@ -110,7 +110,7 @@ export default function SignupPage() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-5">
-                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex flex-shrink-0 items-center justify-center border border-blue-400/30 shadow-inner">
                                     <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
@@ -121,7 +121,7 @@ export default function SignupPage() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-5">
-                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex flex-shrink-0 items-center justify-center border border-blue-400/30 shadow-inner">
                                     <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                     </svg>
@@ -132,7 +132,7 @@ export default function SignupPage() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-5">
-                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30 shadow-inner">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/20 flex flex-shrink-0 items-center justify-center border border-blue-400/30 shadow-inner">
                                     <svg className="w-4 h-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h10M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                                     </svg>
