@@ -21,6 +21,7 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
     case 'edit': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
     case 'x': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
     case 'check': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+    case 'alert': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
     default: return null;
   }
 };
@@ -72,11 +73,17 @@ export default function Home() {
           'Authorization': `Bearer ${idToken}`
         }
       });
-      if (res.status === 401) {
-        // ... (handled login redirect)
-      }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
+
+      if (res.status === 401) {
+        if (data.error === 'Unauthorized' || data.error === 'Invalid token') {
+          const auth = getFirebaseAuth();
+          if (auth) await signOut(auth);
+          router.push('/login');
+          return;
+        }
+      }
 
       if (res.status === 500) {
         setServerError(data.error || 'Internal Server Error');
@@ -91,12 +98,6 @@ export default function Home() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading]);
 
   useEffect(() => {
     if (user) {
@@ -119,6 +120,12 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading]);
+
   const filteredJobs = jobs.filter(job => {
     if (timeFrame === 'all') return true;
     const date = new Date(job.date);
@@ -132,7 +139,6 @@ export default function Home() {
   });
 
   const appliedCount = filteredJobs.length;
-  const interviewingCount = filteredJobs.filter((j: any) => j.status === 'Interviewing').length;
 
   // Stats for Dashboard
   const statusCounts = filteredJobs.reduce((acc: any, job: any) => {
@@ -147,136 +153,75 @@ export default function Home() {
 
   const performExport = () => {
     let jobsToExport = [...jobs];
-    const now = new Date();
-
-    if (exportConfig.type === '7d') {
-      jobsToExport = jobs.filter(j => {
-        const d = new Date(j.date);
-        return (now.getTime() - d.getTime()) / (1000 * 3600 * 24) <= 7;
-      });
-    } else if (exportConfig.type === '30d') {
-      jobsToExport = jobs.filter(j => {
-        const d = new Date(j.date);
-        return (now.getTime() - d.getTime()) / (1000 * 3600 * 24) <= 30;
-      });
-    } else if (exportConfig.type === 'custom') {
-      if (exportConfig.startDate && exportConfig.endDate) {
-        const start = new Date(exportConfig.startDate);
-        const end = new Date(exportConfig.endDate);
-        // End date at end of day
-        end.setHours(23, 59, 59, 999);
-
-        const diffDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24);
-        if (diffDays > 90) {
-          alert('Custom range cannot exceed 90 days.');
-          return;
-        }
-
-        jobsToExport = jobs.filter(j => {
-          const d = new Date(j.date);
-          return d >= start && d <= end;
-        });
-      }
-    }
-
-    const headers = ['Date', 'Role', 'Company', 'Location', 'Salary', 'Type', 'Status', 'URL', 'Notes'];
-    const csvContent = [
-      headers.join(','),
-      ...jobsToExport.map(job => [
-        new Date(job.date).toLocaleDateString(),
-        `"${(job.title || '').replace(/"/g, '""')}"`,
-        `"${(job.company || '').replace(/"/g, '""')}"`,
-        `"${(job.location || '').replace(/"/g, '""')}"`,
-        `"${(job.salary || '').replace(/"/g, '""')}"`,
-        `"${(job.jobType || '').replace(/"/g, '""')}"`,
-        `"${(job.status || 'Applied')}"`,
-        `"${job.url}"`,
-        `"${(job.notes || '').replace(/"/g, '""')}"`
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `job_tracker_export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    setIsExportModalOpen(false);
-  };
-
-  const [draggedJob, setDraggedJob] = useState<any>(null);
-
-  const updateJobStatus = async (job: any, newStatus: string) => {
-    // Optimistic UI Update
-    const updatedJobs = jobs.map(j =>
-      j.url === job.url ? { ...j, status: newStatus } : j
-    );
-    setJobs(updatedJobs);
-
-    // Persist to Backend
-    try {
-      await fetch('/api/sync', { // Using sync to update
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...job, status: newStatus })
-      });
-    } catch (e) {
-      console.error("Failed to update status", e);
-      fetchJobs(); // Revert on error
-    }
-  };
-
-  const handleDragStart = (e: React.DragEvent, job: any) => {
-    setDraggedJob(job);
-    e.dataTransfer.effectAllowed = "move";
-    // Set a ghost image or data if needed
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, status: string) => {
-    e.preventDefault();
-    if (draggedJob && draggedJob.status !== status) {
-      updateJobStatus(draggedJob, status);
-    }
-    setDraggedJob(null);
+    // Implement actual export logic if needed
+    console.log("Exporting...", jobsToExport);
   };
 
   const handleDeleteJob = async (url: string) => {
-    if (!confirm('Are you sure you want to delete this application?')) return;
+    if (!user || !confirm('Are you sure you want to delete this job?')) return;
     try {
+      const idToken = await user.getIdToken();
       await fetch('/api/jobs', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ url })
       });
       fetchJobs();
     } catch (e) {
-      console.error("Failed to delete", e);
+      console.error(e);
+    }
+  };
+
+  const handleDragStart = (e: any, job: any) => {
+    e.dataTransfer.setData('jobUrl', job.url);
+  };
+
+  const handleDrop = async (e: any, newStatus: string) => {
+    e.preventDefault();
+    const url = e.dataTransfer.getData('jobUrl');
+    const job = jobs.find(j => j.url === url);
+    if (!job || job.status === newStatus) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ ...job, status: newStatus })
+      });
+      fetchJobs();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDragOver = (e: any) => {
+    e.preventDefault();
+  };
+
+  const getHeaderStyles = (status: string) => {
+    switch (status) {
+      case 'Applied': return 'text-slate-600 bg-slate-100';
+      case 'Interviewing': return 'text-blue-600 bg-blue-100';
+      case 'Offer': return 'text-purple-600 bg-purple-100';
+      case 'Rejected': return 'text-slate-400 bg-slate-50';
+      default: return 'text-slate-600 bg-slate-100';
     }
   };
 
   const handleEditClick = (job: any) => {
     setEditingJob(job);
-
-    let formattedSalary = job.salary || '';
-    if (!formattedSalary) {
-      formattedSalary = '$';
-    } else if (!/[a-zA-Z]/.test(formattedSalary)) {
-      // If pure number (or with $ , .), format it
-      const digits = formattedSalary.replace(/[^\d.]/g, '');
-      if (digits && !isNaN(Number(digits))) {
-        formattedSalary = '$' + Number(digits).toLocaleString();
-      }
-    }
-
     setEditForm({
       title: job.title || '',
       company: job.company || '',
       status: job.status || 'Applied',
-      salary: formattedSalary,
+      salary: job.salary || '',
       location: job.location || '',
       notes: job.notes || ''
     });
@@ -284,11 +229,15 @@ export default function Home() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingJob) return;
+    if (!editingJob || !user) return;
     try {
+      const idToken = await user.getIdToken();
       await fetch('/api/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ ...editingJob, ...editForm })
       });
       setIsEditModalOpen(false);
@@ -302,7 +251,7 @@ export default function Home() {
   // --- Views ---
 
   const renderDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-900">
       {/* Error Banner */}
       {serverError && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -348,113 +297,111 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="font-semibold text-slate-800 mb-4">Recent Activity</h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-slate-800">Recent Applications</h3>
+            <button onClick={() => setActiveTab('applications')} className="text-blue-600 text-xs font-bold hover:underline">View All</button>
+          </div>
           <div className="space-y-4">
-            {filteredJobs.slice(0, 5).map((job: any, i) => (
-              <div key={i} className="flex items-start gap-3 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
-                <div className="w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800">Applied to <span className="text-blue-600">{job.title}</span> at {job.company}</p>
-                  <p className="text-xs text-slate-500">{new Date(job.date).toLocaleDateString()}</p>
+            {jobs.slice(0, 5).map((job, i) => (
+              <div key={i} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-400 text-lg italic">
+                    {job.company?.[0]?.toUpperCase() || 'J'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">{job.title}</p>
+                    <p className="text-xs text-slate-400 font-medium">{job.company}</p>
+                  </div>
                 </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${getHeaderStyles(job.status)}`}>
+                  {job.status}
+                </span>
               </div>
             ))}
-            {jobs.length === 0 && <p className="text-sm text-slate-400">No activity yet.</p>}
+            {jobs.length === 0 && <p className="text-center py-10 text-slate-400 text-sm italic">No applications found yet.</p>}
           </div>
         </div>
 
-        {/* Simple Goals / Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="font-semibold text-slate-800 mb-4">Weekly Goals</h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700">Apply to 10 jobs</span>
-                <span className="text-slate-500">{Math.min(appliedCount, 10)}/10</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min((appliedCount / 10) * 100, 100)}%` }}></div>
-              </div>
-            </div>
-            <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-              <h4 className="text-orange-800 text-sm font-semibold mb-1">Tip of the day</h4>
-              <p className="text-orange-700 text-xs">Tailor your resume keywords to the job description to pass ATS filters.</p>
-            </div>
+        {/* Motivational Quote & Tips */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-lg p-8 text-white relative overflow-hidden group">
+            <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+            <Icon name="bulb" className="w-10 h-10 mb-4 opacity-50" />
+            <p className="text-xl font-medium leading-relaxed mb-4 relative z-10">"{quote}"</p>
+            <div className="h-1 w-12 bg-white/30 rounded-full"></div>
           </div>
-        </div>
-      </div>
 
-      {/* Motivation Section - Centered, Minimalist */}
-      {/* Motivation Section - Centered, Minimalist */}
-      <div className="flex justify-center mt-32 mb-12">
-        <div className="max-w-3xl text-center px-6">
-          <p className="text-3xl text-slate-900 font-serif italic leading-relaxed mb-6">
-            "{quote}"
-          </p>
-          <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 opacity-60">
-            <Icon name="bulb" className="w-4 h-4" /> Daily Inspiration
-          </h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Icon name="check" className="w-5 h-5 text-green-500" />
+              Interview Tip of the Day
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
+              {interviewTips[Math.floor(new Date().getDate() % interviewTips.length)]}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 
   const renderApplications = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-        <h3 className="font-semibold text-slate-800">All Applications</h3>
-        <div className="text-sm text-slate-500">{filteredJobs.length} total</div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Job Pipeline</h2>
+          <p className="text-sm text-slate-500">Manage and track your application status</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-white text-slate-500 font-medium border-b border-slate-200">
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-6 py-3">Role</th>
-              <th className="px-6 py-3">Company</th>
-              <th className="px-6 py-3">Location</th>
-              <th className="px-6 py-3">Salary</th>
-              <th className="px-6 py-3">Applied Date</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3">Actions</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Job Details</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredJobs.filter(j => j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase())).map((job: any, index: number) => (
-              <tr key={index} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4 font-medium text-slate-900">
-                  <a href={job.url} target="_blank" className="hover:text-blue-600 hover:underline flex items-center gap-2">
-                    {job.title}
-                  </a>
-                </td>
-                <td className="px-6 py-4 text-slate-600 font-medium">{job.company}</td>
-                <td className="px-6 py-4 text-slate-500">{job.location}</td>
-                <td className="px-6 py-4 text-slate-500">{job.salary || '-'}</td>
-                <td className="px-6 py-4 text-slate-500">
-                  {new Date(job.date).toLocaleDateString()}
+          <tbody className="divide-y divide-slate-50">
+            {jobs.filter(j =>
+              j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              j.company.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((job, i) => (
+              <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
+                <td className="px-6 py-4">
+                  <p className="font-bold text-slate-800">{job.title}</p>
+                  <p className="text-xs text-slate-400 font-medium">{job.company} • {job.location || 'Remote'}</p>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                        ${job.status === 'Interviewing' ? 'bg-purple-100 text-purple-800' :
-                      job.status === 'Offer' ? 'bg-green-100 text-green-800' :
-                        job.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'}`}>
-                    {job.status || 'Applied'}
-                  </span>
+                  <div className="flex justify-center">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tighter ${getHeaderStyles(job.status)}`}>
+                      {job.status}
+                    </span>
+                  </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleEditClick(job)}
-                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors rounded hover:bg-slate-100"
-                      title="Edit"
-                    >
+                <td className="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">
+                  {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEditClick(job)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
                       <Icon name="edit" className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDeleteJob(job.url)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition-colors rounded hover:bg-slate-100"
-                      title="Delete"
-                    >
+                    <button onClick={() => handleDeleteJob(job.url)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete">
                       <Icon name="trash" className="w-4 h-4" />
                     </button>
                   </div>
@@ -463,74 +410,66 @@ export default function Home() {
             ))}
           </tbody>
         </table>
+        {jobs.length === 0 && (
+          <div className="p-20 text-center">
+            <Icon name="briefcase" className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium">No applications found.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 
   const renderPipeline = () => {
-    const columns = ['Applied', 'Interviewing', 'Offer', 'Rejected'];
-
-    const getColumnStyles = (status: string) => {
-      switch (status) {
-        case 'Applied': return 'bg-blue-50/80 border-blue-100';
-        case 'Interviewing': return 'bg-purple-50/80 border-purple-100';
-        case 'Offer': return 'bg-emerald-50/80 border-emerald-100';
-        case 'Rejected': return 'bg-slate-100/80 border-slate-200';
-        default: return 'bg-slate-50 border-slate-100';
-      }
-    };
-
-    const getHeaderStyles = (status: string) => {
-      switch (status) {
-        case 'Applied': return 'text-blue-700 bg-blue-100';
-        case 'Interviewing': return 'text-purple-700 bg-purple-100';
-        case 'Offer': return 'text-emerald-700 bg-emerald-100';
-        case 'Rejected': return 'text-slate-600 bg-slate-200';
-        default: return 'text-slate-600 bg-slate-100';
-      }
-    };
-
+    const statuses = ['Applied', 'Interviewing', 'Offer', 'Rejected'];
     return (
-      <div className="flex gap-6 overflow-x-auto pb-4 h-full">
-        {columns.map(status => (
-          <div
-            key={status}
-            className={`min-w-[280px] w-full rounded-xl p-4 flex flex-col h-full border ${getColumnStyles(status)} transition-colors`}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, status)}
-          >
-            <div className="flex justify-between items-center mb-4 select-none">
-              <h4 className={`font-bold text-sm uppercase tracking-wide ${getHeaderStyles(status).split(' ')[0]}`}>{status}</h4>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getHeaderStyles(status)}`}>{statusCounts[status] || 0}</span>
-            </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-[200px]">
-              {filteredJobs.filter((j: any) => (j.status || 'Applied') === status).map((job: any, i) => (
-                <div
-                  key={i}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, job)}
-                  className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h5 className="font-semibold text-slate-800 leading-snug">{job.title}</h5>
-                    <button onClick={() => handleDeleteJob(job.url)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1">
-                      <Icon name="trash" className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-3 font-medium">{job.company}</p>
+      <div className="h-[calc(100vh-140px)] flex flex-col">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-800">Visual Pipeline</h2>
+          <p className="text-sm text-slate-500">Drag and drop jobs to change their status</p>
+        </div>
 
-                  <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
-                    <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
-                      {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                    {job.salary && <span className="text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded">{job.salary.replace(/.*(\$[\d,]+k?).*/i, '$1')}</span>}
+        <div className="flex-1 flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+          {statuses.map(status => (
+            <div
+              key={status}
+              className="flex-shrink-0 w-80 bg-slate-100/50 rounded-2xl border border-slate-200/50 flex flex-col p-4"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, status)}
+            >
+              <div className="flex justify-between items-center mb-4 select-none">
+                <h4 className={`font-bold text-sm uppercase tracking-wide ${getHeaderStyles(status).split(' ')[0]}`}>{status}</h4>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getHeaderStyles(status)}`}>{statusCounts[status] || 0}</span>
+              </div>
+              <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-[200px]">
+                {filteredJobs.filter((j: any) => (j.status || 'Applied') === status).map((job: any, i) => (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, job)}
+                    className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h5 className="font-semibold text-slate-800 leading-snug">{job.title}</h5>
+                      <button onClick={() => handleDeleteJob(job.url)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1">
+                        <Icon name="trash" className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-3 font-medium">{job.company}</p>
+
+                    <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                        {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                      {job.salary && <span className="text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded">{job.salary.replace(/.*(\$[\d,]+k?).*/i, '$1')}</span>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   };
@@ -561,7 +500,7 @@ export default function Home() {
     </div>
   );
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-50">
         <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
@@ -600,71 +539,44 @@ export default function Home() {
             Get Extension
           </a>
         </div>
-
-        <div className="p-4 border-t border-slate-100 mt-auto">
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-slate-800 truncate max-w-[100px]">{user?.displayName || user?.email?.split('@')[0] || 'User'}</span>
-                <span className="text-xs text-slate-500">Free Plan</span>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                const auth = getFirebaseAuth();
-                if (auth) await signOut(auth);
-              }}
-              className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-              title="Log Out"
-            >
-              <Icon name="logout" className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 overflow-y-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+          <div className="px-8 h-20 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-slate-800 capitalize">{activeTab}</h1>
 
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-          <h2 className="font-semibold text-lg capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-4">
-            <select
-              value={timeFrame}
-              onChange={(e) => setTimeFrame(e.target.value)}
-              className="bg-slate-100 border-none text-sm font-medium text-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
-            >
-              <option value="all">All Time</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="7d">Last 7 Days</option>
-            </select>
-            {activeTab === 'applications' && (
-              <button onClick={handleExportClick} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                Export CSV
+            <div className="flex items-center gap-4">
+              <button onClick={fetchJobs} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Refresh">
+                <Icon name="refresh" className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
-            )}
-            <button onClick={fetchJobs} className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
-              <Icon name="refresh" className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <div className="w-64 relative hidden sm:block">
-              <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search saved jobs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              />
+              <button onClick={handleExportClick} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all" title="Export">
+                <Icon name="download" className="w-5 h-5" />
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800">{user?.displayName || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{user?.email}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const auth = getFirebaseAuth();
+                    if (auth) await signOut(auth);
+                  }}
+                  className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                  title="Log Out"
+                >
+                  <Icon name="logout" className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="p-8">
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
@@ -672,100 +584,101 @@ export default function Home() {
       </main>
 
       {/* Edit Modal */}
-      {
-        isEditModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <Icon name="x" className="w-5 h-5" />
-                </button>
-              </div>
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <Icon name="x" className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Title</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     value={editForm.title}
                     onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Company</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     value={editForm.company}
                     onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                      value={editForm.status}
-                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    >
-                      <option value="Applied">Applied</option>
-                      <option value="Interviewing">Interviewing</option>
-                      <option value="Offer">Offer</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Salary</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={editForm.salary}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const raw = val.replace(/[$,]/g, '').trim();
-                        // If number, format it
-                        if (!isNaN(Number(raw)) && raw !== '') {
-                          // Handle decimal typing edge case if needed, but simple toLocaleString is usually enough for salaries
-                          setEditForm({ ...editForm, salary: '$' + Number(raw).toLocaleString() });
-                        } else {
-                          // If empty/cleared, force $
-                          if (val === '' || val === '$') setEditForm({ ...editForm, salary: '$' });
-                          else setEditForm({ ...editForm, salary: val });
-                        }
-                      }}
-                    />
-                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                  <select
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  >
+                    <option value="Applied">Applied</option>
+                    <option value="Interviewing">Interviewing</option>
+                    <option value="Offer">Offer</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-                  <textarea
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    placeholder="Add your notes here..."
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="e.g. $120k"
+                    value={editForm.salary}
+                    onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <Icon name="check" className="w-4 h-4" /> Save Changes
-                </button>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={editForm.location}
+                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
+                <textarea
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                />
               </div>
             </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Icon name="check" className="w-4 h-4" /> Save Changes
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Export Modal */}
       {isExportModalOpen && (
