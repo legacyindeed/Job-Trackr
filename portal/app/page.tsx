@@ -481,8 +481,34 @@ export default function Home() {
     );
   };
 
+  const renderMobileNav = () => (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 pb-safe">
+      <button
+        onClick={() => setActiveTab('dashboard')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="dashboard" className="w-6 h-6" />
+        Dashboard
+      </button>
+      <button
+        onClick={() => setActiveTab('applications')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'applications' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="briefcase" className="w-6 h-6" />
+        Applications
+      </button>
+      <button
+        onClick={() => setActiveTab('pipeline')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'pipeline' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="pipeline" className="w-6 h-6" />
+        Pipeline
+      </button>
+    </div>
+  );
+
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 pb-16 md:pb-0">
 
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
@@ -751,6 +777,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      {renderMobileNav()}
     </div>
   );
 }
