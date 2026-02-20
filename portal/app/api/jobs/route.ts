@@ -14,7 +14,7 @@ async function getUserId(request: Request) {
         return { uid: decodedToken.uid };
     } catch (error: any) {
         if (error.message?.includes("SERVER_CONFIG_ERROR")) {
-            return { error: 'Server configuration error', status: 500 };
+            return { error: error.message, status: 500 };
         }
         return { error: 'Invalid token', status: 401 };
     }

@@ -1,23 +1,25 @@
 import * as admin from 'firebase-admin';
 
-function getAdminApp() {
-    if (admin.apps.length > 0) return admin.apps[0];
+function getAdminApp(): admin.app.App | { error: string } {
+    if (admin.apps.length > 0) return admin.apps[0] as admin.app.App;
 
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    // Vercel handles newlines differently. We try to normalize them.
     let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-    if (!projectId || !clientEmail || !privateKey) {
-        return null;
-    }
+    if (!projectId) return { error: "Missing FIREBASE_PROJECT_ID" };
+    if (!clientEmail) return { error: "Missing FIREBASE_CLIENT_EMAIL" };
+    if (!privateKey) return { error: "Missing FIREBASE_PRIVATE_KEY" };
 
-    // Fix for Vercel/Node private key formatting
+    // Cleanup: Remove quotes if added by mistake
+    privateKey = privateKey.trim().replace(/^["']|["']$/g, '');
+
+    // Cleanup: Handle escaped newlines
     if (privateKey.includes('\\n')) {
         privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
-    // Ensure it has the correct BEGIN/END blocks if they were stripped
+    // Cleanup: Ensure the key has the correct headers
     if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
         privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
     }
@@ -30,21 +32,23 @@ function getAdminApp() {
                 privateKey,
             }),
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Firebase Admin initialization error:", error);
-        return null;
+        return { error: `Init failed: ${error.message}` };
     }
 }
 
 export const adminAuth = {
     verifyIdToken: async (token: string) => {
-        const app = getAdminApp();
-        if (!app) {
-            console.error("Firebase Admin SDK failed to initialize. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.");
-            throw new Error("SERVER_CONFIG_ERROR: Firebase Admin SDK not initialized.");
+        const result = getAdminApp();
+
+        if ('error' in result) {
+            console.error("Firebase Admin Config Error:", result.error);
+            throw new Error(`SERVER_CONFIG_ERROR: ${result.error}`);
         }
+
         try {
-            return await admin.auth(app).verifyIdToken(token);
+            return await admin.auth(result).verifyIdToken(token);
         } catch (error: any) {
             console.error("Token verification failed:", error.message);
             throw error;
