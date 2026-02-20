@@ -419,8 +419,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mt-16 mb-12 flex justify-center px-8 text-center">
-        <p className="text-xl italic text-slate-800 font-medium max-w-2xl leading-relaxed">
+      <div className="mt-20 mb-16 flex justify-center px-8 text-center">
+        <p className="text-3xl italic text-slate-800 font-medium max-w-4xl leading-tight">
           "{quote}"
         </p>
       </div>
