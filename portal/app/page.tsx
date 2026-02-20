@@ -727,13 +727,15 @@ function DashboardContent() {
             <h1 className="text-xl font-bold text-slate-800 capitalize">{activeTab}</h1>
 
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
-              >
-                <Icon name="plus" className="w-4 h-4" />
-                Add Job
-              </button>
+              {activeTab === 'applications' && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 border border-white/10"
+                >
+                  <Icon name="plus" className="w-3.5 h-3.5" />
+                  Add Job
+                </button>
+              )}
               <button onClick={fetchJobs} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Refresh">
                 <Icon name="refresh" className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
@@ -1067,12 +1069,14 @@ function DashboardContent() {
       {renderMobileNav()}
 
       {/* Mobile Floating Add Button */}
-      <button
-        onClick={() => setIsAddModalOpen(true)}
-        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform"
-      >
-        <Icon name="plus" className="w-8 h-8" />
-      </button>
+      {activeTab === 'applications' && (
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center z-40 active:scale-90 transition-transform"
+        >
+          <Icon name="plus" className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }
