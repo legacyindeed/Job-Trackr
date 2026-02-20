@@ -27,6 +27,14 @@
             "css": [
                 "content.css"
             ]
+        },
+        {
+            "matches": [
+                "https://job-trackr-ten.vercel.app/*"
+            ],
+            "js": [
+                "auth-sync.js"
+            ]
         }
     ],
     "action": {
@@ -42,5 +50,10 @@
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
+    },
+    "externally_connectable": {
+        "matches": [
+            "https://job-trackr-ten.vercel.app/*"
+        ]
     }
 }

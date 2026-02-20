@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -17,19 +18,14 @@ export default function LoginPage() {
         setLoading(true);
         setError('');
 
-        const res = await signIn('credentials', {
-            redirect: false,
-            email,
-            password,
-        });
-
-        if (res?.error) {
-            setError('Invalid email or password');
-        } else {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
             router.push('/');
-            router.refresh();
+        } catch (err: any) {
+            setError('Invalid email or password');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

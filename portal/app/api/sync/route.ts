@@ -1,15 +1,28 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { adminAuth } from '../../../lib/firebase-admin';
 
-export async function POST(request: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+async function getUserId(request: Request) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
     }
 
-    const userId = (session.user as any).id;
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error('Error verifying token:', error);
+        return null;
+    }
+}
+
+export async function POST(request: Request) {
+    const userId = await getUserId(request);
+    if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     try {
         const job = await request.json();

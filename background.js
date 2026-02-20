@@ -4,8 +4,13 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ savedJobs: [], ignoredUrls: [] });
 });
 
-// Listen for sync messages from content script
+// Listen for messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "updateToken") {
+    chrome.storage.local.set({ firebaseToken: request.token });
+    console.log("Auth token updated");
+  }
+
   if (request.action === "syncToSheet") {
     // 1. Sync to Google Sheet (Existing)
     chrome.storage.sync.get(['webhookUrl'], (result) => {
@@ -20,17 +25,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
 
     // 2. Sync to Portal (Production)
-    fetch('https://job-trackr-ten.vercel.app/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(request.job)
-    })
-      .then(response => {
-        if (!response.ok) throw new Error('Portal API failed');
-        console.log('Synced successfully to Portal');
+    chrome.storage.local.get(['firebaseToken'], (result) => {
+      const token = result.firebaseToken;
+
+      fetch('https://job-trackr-ten.vercel.app/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(request.job)
       })
-      .catch(err => console.error('Error syncing to portal. Are you logged in?', err));
+        .then(response => {
+          if (!response.ok) throw new Error('Portal API failed');
+          console.log('Synced successfully to Portal');
+        })
+        .catch(err => console.error('Error syncing to portal. Are you logged in?', err));
+    });
   }
 });
 

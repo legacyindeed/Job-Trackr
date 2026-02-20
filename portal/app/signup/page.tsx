@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function SignupPage() {
     const [name, setName] = useState('');
@@ -18,19 +20,22 @@ export default function SignupPage() {
         setError('');
 
         try {
-            const res = await fetch('/api/register', {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            await updateProfile(user, { displayName: name });
+
+            // Call onboarding API to claim orphan jobs if this is the first user
+            const idToken = await user.getIdToken();
+            await fetch('/api/user/onboard', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                }
             });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'Something went wrong');
-            }
-
-            router.push('/login');
+            router.push('/');
         } catch (err: any) {
             setError(err.message);
         } finally {

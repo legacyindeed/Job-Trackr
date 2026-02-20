@@ -4,14 +4,6 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   try {
     const result = await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
       CREATE TABLE IF NOT EXISTS jobs (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255),
@@ -21,7 +13,7 @@ export async function GET(request: Request) {
         url TEXT UNIQUE,
         status VARCHAR(50) DEFAULT 'Applied',
         job_type VARCHAR(100),
-        user_id INTEGER REFERENCES users(id),
+        user_id TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -29,7 +21,9 @@ export async function GET(request: Request) {
       DO $$ 
       BEGIN 
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='user_id') THEN
-          ALTER TABLE jobs ADD COLUMN user_id INTEGER REFERENCES users(id);
+          ALTER TABLE jobs ADD COLUMN user_id TEXT;
+        ELSE
+          ALTER TABLE jobs ALTER COLUMN user_id TYPE TEXT;
         END IF;
       END $$;
     `;

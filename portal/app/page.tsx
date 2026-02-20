@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '../context/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth as firebaseAuth } from '../lib/firebase';
+import { useRouter } from 'next/navigation';
 
 // Icons as a component
 const Icon = ({ name, className }: { name: string; className?: string }) => {
@@ -39,7 +42,7 @@ const interviewTips = [
 ];
 
 export default function Home() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -47,6 +50,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quote, setQuote] = useState('');
   const [dailyTips, setDailyTips] = useState<string[]>([]);
+  const router = useRouter();
 
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -58,16 +62,22 @@ export default function Home() {
   const [exportConfig, setExportConfig] = useState({ type: '30d', startDate: '', endDate: '' });
 
   const fetchJobs = async () => {
-    if (status !== 'authenticated') return;
+    if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/jobs');
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/jobs', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
       if (res.status === 401) {
-        signOut();
+        await firebaseAuth.signOut();
+        router.push('/login');
         return;
       }
       const data = await res.json();
-      setJobs(data);
+      setJobs(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -76,12 +86,18 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    if (user) {
       fetchJobs();
-      const interval = setInterval(fetchJobs, 5000);
+      const interval = setInterval(fetchJobs, 10000);
       return () => clearInterval(interval);
     }
-  }, [status]);
+  }, [user]);
 
   useEffect(() => {
     const rotateQuote = () => {
@@ -561,15 +577,15 @@ export default function Home() {
           <div className="flex items-center justify-between group">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                {session?.user?.name?.[0] || 'U'}
+                {user?.displayName?.[0] || user?.email?.[0] || 'U'}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium text-slate-800 truncate max-w-[100px]">{session?.user?.name || 'User'}</span>
+                <span className="text-sm font-medium text-slate-800 truncate max-w-[100px]">{user?.displayName || user?.email?.split('@')[0] || 'User'}</span>
                 <span className="text-xs text-slate-500">Free Plan</span>
               </div>
             </div>
             <button
-              onClick={() => signOut()}
+              onClick={() => signOut(firebaseAuth)}
               className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
               title="Log Out"
             >

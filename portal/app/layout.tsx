@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "Your ultimate job application tracking dashboard.",
 };
 
-import { Providers } from "./providers";
+import { AuthProvider } from "../context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -29,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
