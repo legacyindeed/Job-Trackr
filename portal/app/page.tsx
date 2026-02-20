@@ -2,11 +2,11 @@
 // Build Trigger: Migration v1
 
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { getFirebaseAuth } from '../lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 // Icons as a component
 const Icon = ({ name, className }: { name: string; className?: string }) => {
@@ -45,6 +45,18 @@ const interviewTips = [
 ];
 
 export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const { user, loading: authLoading } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +66,25 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quote, setQuote] = useState('');
   const [dailyTips, setDailyTips] = useState<string[]>([]);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // URL Sync for Tabs
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['dashboard', 'applications', 'pipeline'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(pathname + '?' + params.toString());
+  };
 
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -311,11 +341,14 @@ export default function Home() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="text-slate-500 text-sm font-medium mb-1">Total Applications</div>
+        <button
+          onClick={() => handleTabChange('applications')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+        >
+          <div className="text-slate-500 text-sm font-medium mb-1 group-hover:text-blue-500 transition-colors">Total Applications</div>
           <div className="text-3xl font-bold text-slate-800">{appliedCount}</div>
           <div className="mt-2 text-xs text-green-600 font-medium">+ Updated just now</div>
-        </div>
+        </button>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-blue-50 to-white">
           <div className="text-blue-600 text-sm font-medium mb-1">Interviewing</div>
           <div className="text-3xl font-bold text-blue-900">{statusCounts['Interviewing'] || 0}</div>
@@ -337,7 +370,7 @@ export default function Home() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-800">Recent Applications</h3>
-            <button onClick={() => setActiveTab('applications')} className="text-blue-600 text-xs font-bold hover:underline">View All</button>
+            <button onClick={() => handleTabChange('applications')} className="text-blue-600 text-xs font-bold hover:underline">View All</button>
           </div>
           <div className="space-y-4">
             {jobs.slice(0, 5).map((job, i) => (
@@ -579,21 +612,21 @@ export default function Home() {
   const renderMobileNav = () => (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 pb-safe">
       <button
-        onClick={() => setActiveTab('dashboard')}
+        onClick={() => handleTabChange('dashboard')}
         className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500'}`}
       >
         <Icon name="dashboard" className="w-6 h-6" />
         Dashboard
       </button>
       <button
-        onClick={() => setActiveTab('applications')}
+        onClick={() => handleTabChange('applications')}
         className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'applications' ? 'text-blue-600' : 'text-slate-500'}`}
       >
         <Icon name="briefcase" className="w-6 h-6" />
         Applications
       </button>
       <button
-        onClick={() => setActiveTab('pipeline')}
+        onClick={() => handleTabChange('pipeline')}
         className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'pipeline' ? 'text-blue-600' : 'text-slate-500'}`}
       >
         <Icon name="pipeline" className="w-6 h-6" />
@@ -621,15 +654,15 @@ export default function Home() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+          <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
             <Icon name="dashboard" className="w-5 h-5" />
             Dashboard
           </button>
-          <button onClick={() => setActiveTab('applications')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'applications' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+          <button onClick={() => handleTabChange('applications')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'applications' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
             <Icon name="briefcase" className="w-5 h-5" />
             Applications
           </button>
-          <button onClick={() => setActiveTab('pipeline')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pipeline' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+          <button onClick={() => handleTabChange('pipeline')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pipeline' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
             <Icon name="pipeline" className="w-5 h-5" />
             Pipeline
           </button>
