@@ -45,6 +45,7 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [timeFrame, setTimeFrame] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,20 +73,18 @@ export default function Home() {
         }
       });
       if (res.status === 401) {
-        // Only sign out if it's a genuine 401 (not a 500 configuration error)
-        const data = await res.json().catch(() => ({}));
-        if (data.error === 'Unauthorized') {
-          const auth = getFirebaseAuth();
-          if (auth) await signOut(auth);
-          router.push('/login');
-          return;
-        }
-        console.error('Server side auth error:', data.error);
-        setLoading(false); // Stop loading if it's a 401 but not an unauthorized sign-out
-        return;
+        // ... (handled login redirect)
       }
+
       const data = await res.json();
-      setJobs(Array.isArray(data) ? data : []);
+
+      if (res.status === 500) {
+        setServerError(data.error || 'Internal Server Error');
+        setJobs([]);
+      } else {
+        setJobs(Array.isArray(data) ? data : []);
+        setServerError(null);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -304,6 +303,27 @@ export default function Home() {
 
   const renderDashboard = () => (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {serverError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Icon name="alert" className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-bold">Server Configuration Error</p>
+                <p className="text-sm opacity-80">{serverError}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-xs font-bold transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
