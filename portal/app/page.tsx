@@ -474,7 +474,7 @@ export default function Home() {
                 onClick={() => window.open(job.url, '_blank')}
               >
                 <td className="px-6 py-4">
-                  <p className="text-sm text-slate-500 font-medium">{job.title}</p>
+                  <p className="text-sm text-slate-800 font-medium">{job.title}</p>
                   <p className="text-xs text-slate-400 font-medium">{job.company} • {job.location || 'Remote'}</p>
                 </td>
                 <td className="px-6 py-4">
@@ -553,7 +553,7 @@ export default function Home() {
                     className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h5 className="text-sm font-medium text-slate-500 leading-snug">{job.title}</h5>
+                      <h5 className="text-sm font-medium text-slate-800 leading-snug">{job.title}</h5>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
                         className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1"
