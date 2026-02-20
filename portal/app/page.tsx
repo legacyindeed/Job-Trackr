@@ -388,6 +388,7 @@ export default function Home() {
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Job Details</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Salary</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -398,10 +399,17 @@ export default function Home() {
               j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
               j.company.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((job, i) => (
-              <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
+              <tr
+                key={i}
+                className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                onClick={() => window.open(job.url, '_blank')}
+              >
                 <td className="px-6 py-4">
                   <p className="font-bold text-slate-800">{job.title}</p>
                   <p className="text-xs text-slate-400 font-medium">{job.company} • {job.location || 'Remote'}</p>
+                </td>
+                <td className="px-6 py-4">
+                  {job.salary ? <span className="text-sm text-green-600 font-bold bg-green-50 px-2.5 py-1 rounded-lg">{job.salary}</span> : <span className="text-slate-300 text-xs">-</span>}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex justify-center">
@@ -415,10 +423,18 @@ export default function Home() {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEditClick(job)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(job); }}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Edit"
+                    >
                       <Icon name="edit" className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDeleteJob(job.url)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      title="Delete"
+                    >
                       <Icon name="trash" className="w-4 h-4" />
                     </button>
                   </div>
@@ -464,11 +480,15 @@ export default function Home() {
                     key={i}
                     draggable
                     onDragStart={(e) => handleDragStart(e, job)}
+                    onClick={() => window.open(job.url, '_blank')}
                     className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h5 className="font-semibold text-slate-800 leading-snug">{job.title}</h5>
-                      <button onClick={() => handleDeleteJob(job.url)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1"
+                      >
                         <Icon name="trash" className="w-3.5 h-3.5" />
                       </button>
                     </div>
