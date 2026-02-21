@@ -363,48 +363,6 @@ function DashboardContent() {
 
   const renderDashboard = () => (
     <div className="space-y-6 text-slate-900">
-      {/* Sidekick Intelligence Banner */}
-      {personality && (
-        <div className="relative overflow-hidden bg-slate-900 rounded-[2rem] p-6 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl -ml-10 -mb-10"></div>
-
-          <div className="relative flex flex-col md:flex-row items-center gap-6">
-            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/10 animate-pulse">
-              {personality === 'serge' && '🎖️'}
-              {personality === 'jax' && '🎸'}
-              {personality === 'luna' && '🌙'}
-            </div>
-
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
-                  {personality === 'serge' && "Serge's Strategic Orders"}
-                  {personality === 'jax' && "Jax's Daily Bullshit Filter"}
-                  {personality === 'luna' && "Luna's Spiritual Alignment"}
-                </span>
-                <div className="h-1 w-1 rounded-full bg-blue-400/50"></div>
-                <span className="text-[10px] font-bold text-slate-500">MISSION-001</span>
-              </div>
-              <p className="text-xl md:text-2xl font-bold leading-tight tracking-tight text-slate-100 italic">
-                "{quote}"
-              </p>
-            </div>
-
-            <div className="hidden lg:block h-12 w-px bg-white/10 mx-4"></div>
-
-            <div className="hidden lg:flex flex-col items-end">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Target Intensity</p>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className={`h-1 w-4 rounded-full ${i <= 3 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Error Banner */}
       {serverError && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -824,6 +782,37 @@ function DashboardContent() {
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
         </div>
+
+        {personality && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-xl border border-slate-200/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto group">
+              <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl shadow-sm border border-slate-100 ${personality === 'serge' ? 'bg-green-50' : personality === 'jax' ? 'bg-indigo-50' : 'bg-teal-50'
+                }`}>
+                {personality === 'serge' && '🎖️'}
+                {personality === 'jax' && '🎸'}
+                {personality === 'luna' && '🌙'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{personality} intel</span>
+                  <div className="h-1 w-1 rounded-full bg-slate-300"></div>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tight">Daily Mission</span>
+                </div>
+                <p className="text-sm font-semibold text-slate-700 truncate group-hover:whitespace-normal transition-all duration-300">
+                  "{quote}"
+                </p>
+              </div>
+              <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
+              <div className="hidden sm:flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Live</span>
+                </div>
+                <span className="text-[9px] font-black text-slate-300">v1.2.0</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {personality && (
           <Sidekick
