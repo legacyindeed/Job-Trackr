@@ -825,7 +825,7 @@ function DashboardContent() {
         </div>
 
         {activeTab === 'dashboard' && personality && (
-          <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[640px] px-3 sm:px-4 pointer-events-none">
+          <div className="hidden sm:block fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[640px] px-3 sm:px-4 pointer-events-none">
             <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-2xl sm:rounded-full py-3 px-4 sm:py-3.5 sm:px-6 flex items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pointer-events-auto group hover:shadow-[0_12px_50px_rgba(0,0,0,0.15)] transition-all">
 
               {/* Profile Bubble (Left) */}
