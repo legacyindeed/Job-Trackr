@@ -821,11 +821,11 @@ function DashboardContent() {
         </div>
 
         {activeTab === 'dashboard' && personality && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4 pointer-events-none">
-            <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_8px_30px_rgba(0,0,0,0.08)] rounded-full py-2.5 px-4 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-700 pointer-events-auto group hover:shadow-[0_8px_40px_rgba(0,0,0,0.12)] transition-all">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 pointer-events-none">
+            <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-full py-3.5 px-6 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pointer-events-auto group hover:shadow-[0_12px_50px_rgba(0,0,0,0.15)] transition-all">
 
               {/* Profile Bubble (Left) */}
-              <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xl shadow-sm border border-white/50 relative overflow-hidden ${personality === 'serge' ? 'bg-emerald-500' : personality === 'jax' ? 'bg-indigo-500' : 'bg-teal-500'
+              <div className={`w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-2xl shadow-md border border-white/50 relative overflow-hidden ${personality === 'serge' ? 'bg-emerald-500' : personality === 'jax' ? 'bg-indigo-500' : 'bg-teal-500'
                 }`}>
                 <span className="relative z-10 transition-transform group-hover:scale-110 duration-300">
                   {personality === 'serge' && '🎖️'}{personality === 'jax' && '🎸'}{personality === 'luna' && '🌙'}
@@ -834,24 +834,24 @@ function DashboardContent() {
 
               {/* Content Area (Right) */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 leading-none mb-0.5">
-                  <span className={`text-[8px] font-black uppercase tracking-widest transition-colors ${isAiThinking ? 'text-blue-500 animate-pulse' : 'text-slate-400'}`}>
+                <div className="flex items-center gap-2 leading-none mb-1">
+                  <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isAiThinking ? 'text-blue-500 animate-pulse' : 'text-slate-400'}`}>
                     {isAiThinking ? 'Analyzing' : aiHeader}
                   </span>
-                  <div className="w-0.5 h-0.5 rounded-full bg-slate-300"></div>
-                  <span className="text-[8px] font-bold text-slate-300 uppercase italic">{personality}</span>
+                  <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                  <span className="text-[10px] font-bold text-slate-300 uppercase italic">{personality}</span>
                 </div>
 
                 <div className="relative">
-                  <p className="text-[11px] font-bold text-slate-700 leading-tight line-clamp-1 group-hover:line-clamp-none transition-all duration-300 italic pr-2">
-                    "{aiMessage || "Connecting..."}"
+                  <p className="text-[14px] font-bold text-slate-700 leading-tight line-clamp-1 group-hover:line-clamp-none transition-all duration-300 italic pr-3">
+                    "{aiMessage || "Connecting to neural bank..."}"
                   </p>
 
                   {isAiThinking && (
-                    <div className="absolute inset-0 bg-white/60 flex items-center gap-1">
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                    <div className="absolute inset-0 bg-white/60 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
                     </div>
                   )}
                 </div>
