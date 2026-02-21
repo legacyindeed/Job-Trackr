@@ -843,7 +843,7 @@ function DashboardContent() {
                 </div>
 
                 <div className="relative">
-                  <p className="text-[14px] font-bold text-slate-700 leading-tight line-clamp-1 group-hover:line-clamp-none transition-all duration-300 italic pr-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                  <p className="text-[14px] font-normal text-slate-700 leading-tight line-clamp-1 group-hover:line-clamp-none transition-all duration-300 italic pr-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                     "{aiMessage || "Connecting to neural bank..."}"
                   </p>
 
