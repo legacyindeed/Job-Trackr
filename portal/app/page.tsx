@@ -821,7 +821,7 @@ function DashboardContent() {
         </div>
 
         {activeTab === 'dashboard' && personality && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 pointer-events-none">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[640px] px-4 pointer-events-none">
             <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-full py-3.5 px-6 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pointer-events-auto group hover:shadow-[0_12px_50px_rgba(0,0,0,0.15)] transition-all">
 
               {/* Profile Bubble (Left) */}
@@ -843,7 +843,7 @@ function DashboardContent() {
                 </div>
 
                 <div className="relative">
-                  <p className="text-[21px] font-normal text-slate-700 leading-tight line-clamp-1 group-hover:line-clamp-none transition-all duration-300 italic pr-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                  <p className="text-[21px] font-normal text-slate-700 leading-snug line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic pr-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
                     "{aiMessage || "Connecting to neural bank..."}"
                   </p>
 
