@@ -34,20 +34,34 @@ export async function POST(req: Request) {
         let prompt = `${char.basePrompt}\n\n`;
 
         if (event === 'add_job') {
-            prompt += `The user just tracked a new job application: ${context?.title} at ${context?.company}. React to this specific company or role in your characteristic style.`;
-        } else if (event === 'daily_mission') {
-            prompt += `Give the user a unique 'Daily Mission' for their job search. It should be one actionable task.`;
+            prompt += `The user just tracked a new job application: ${context?.title} at ${context?.company}. React specifically to this company or role.`;
+        } else if (event === 'daily_mission' || event === 'refresh') {
+            prompt += `Give the user a random bit of 'Intelligence'. This could be a tactical tip, a witty observation about corporate life, a motivational kick (if you're Serge), or a peaceful reflection (if you're Luna). 
+      Make it feel fresh and unique. It should be one of: [Tactical Intel, Command Center Update, Vibe Check, Strategic Brief, Sarcastic Reality, Zen Focus].`;
         } else if (event === 'welcome') {
-            prompt += `Give the user a fresh, unique welcome message and express your excitement to be their mentor.`;
-        } else {
-            prompt += `Give the user a random bit of encouragement or a witty observation about the job market.`;
+            prompt += `Give a unique welcome message for their session.`;
         }
+
+        prompt += `\n\nReturn the response as a JSON object with two fields: "header" (the type of intel, e.g., "Zen Focus" or "Command Update") and "text" (the actual message). Do not include any other text or markdown formatting in your response, just the raw JSON.`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const text = response.text().trim().replace(/^"|"$/g, '');
+        const rawText = response.text().trim();
 
-        return NextResponse.json({ text });
+        // Attempt to parse JSON, fallback if AI fails JSON format
+        let data;
+        try {
+            // Clean up potential markdown code blocks
+            const cleanedJson = rawText.replace(/```json|```/g, '').trim();
+            data = JSON.parse(cleanedJson);
+        } catch (e) {
+            data = {
+                header: event === 'add_job' ? 'Live Alert' : 'Intelligence',
+                text: rawText.replace(/^"|"$/g, '')
+            };
+        }
+
+        return NextResponse.json(data);
     } catch (error) {
         console.error('AI Sidekick Error:', error);
         return NextResponse.json({ text: "The universe is a bit quiet right now. Keep going!" }, { status: 500 });

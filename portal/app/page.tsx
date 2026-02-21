@@ -78,6 +78,7 @@ function DashboardContent() {
   });
   const [sidekickEvent, setSidekickEvent] = useState<string | null>(null);
   const [aiMessage, setAiMessage] = useState<string>("");
+  const [aiHeader, setAiHeader] = useState<string>("Intel Brief");
   const [isAiThinking, setIsAiThinking] = useState(false);
 
   const fetchSidekickMessage = async (event: string, context?: any) => {
@@ -91,6 +92,7 @@ function DashboardContent() {
       });
       const data = await res.json();
       setAiMessage(data.text);
+      if (data.header) setAiHeader(data.header);
     } catch (e) {
       console.error(e);
     } finally {
@@ -107,10 +109,10 @@ function DashboardContent() {
     }
   }, [sidekickEvent]);
 
-  // Initial AI Mission
+  // Refresh AI Intelligence on Dashboard mount
   useEffect(() => {
-    if (personality && activeTab === 'dashboard' && !aiMessage) {
-      fetchSidekickMessage('daily_mission');
+    if (personality && activeTab === 'dashboard') {
+      fetchSidekickMessage('refresh');
     }
   }, [personality, activeTab]);
 
@@ -820,42 +822,44 @@ function DashboardContent() {
 
         {activeTab === 'dashboard' && personality && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 pointer-events-none">
-            <div className="bg-white/90 backdrop-blur-xl border border-slate-200/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto group">
-              <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl shadow-sm border border-slate-100 ${personality === 'serge' ? 'bg-green-50' : personality === 'jax' ? 'bg-indigo-50' : 'bg-teal-50'
+            <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_12px_40px_rgba(0,0,0,0.12)] rounded-[1.5rem] p-5 flex items-start gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700 pointer-events-auto group hover:shadow-[0_12px_50px_rgba(0,0,0,0.15)] transition-all">
+              <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-3xl shadow-inner border border-white/50 relative overflow-hidden ${personality === 'serge' ? 'bg-emerald-50 text-emerald-600' : personality === 'jax' ? 'bg-indigo-50 text-indigo-600' : 'bg-teal-50 text-teal-600'
                 }`}>
-                {personality === 'serge' && '🎖️'}
-                {personality === 'jax' && '🎸'}
-                {personality === 'luna' && '🌙'}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent opacity-50"></div>
+                <span className="relative z-10">{personality === 'serge' && '🎖️'}{personality === 'jax' && '🎸'}{personality === 'luna' && '🌙'}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{personality} intel</span>
-                  <div className="h-1 w-1 rounded-full bg-slate-300"></div>
-                  <span className={`text-[10px] font-bold uppercase tracking-tight ${sidekickEvent ? 'text-blue-600' : 'text-slate-500'}`}>
-                    {sidekickEvent ? 'AI Analysis' : 'Daily Intelligence'}
+
+              <div className="flex-1 min-w-0 pt-1">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 font-mono italic">{personality}</span>
+                  <div className="h-0.5 w-3 rounded-full bg-slate-200"></div>
+                  <span className={`text-[11px] font-bold uppercase tracking-tight transition-colors duration-500 ${isAiThinking ? 'text-blue-500 animate-pulse' : 'text-blue-600/70'}`}>
+                    {isAiThinking ? 'Accessing Neural Link...' : aiHeader}
                   </span>
                 </div>
+
                 <div className="relative">
+                  <p className="text-[13px] font-semibold text-slate-800 leading-[1.6] line-clamp-2 group-hover:line-clamp-none transition-all duration-500 italic">
+                    "{aiMessage || "Stand by for tactical briefing..."}"
+                  </p>
+
                   {isAiThinking && (
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center gap-2">
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-                      <span className="text-[10px] font-bold text-blue-500 lowercase tracking-tighter">Thinking...</span>
+                    <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center gap-1.5 rounded-lg border border-white/40">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></div>
                     </div>
                   )}
-                  <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic">
-                    "{aiMessage || quote}"
-                  </p>
                 </div>
               </div>
-              <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
-              <div className="hidden sm:flex flex-col items-end gap-1">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Live</span>
+
+              <div className="hidden sm:flex flex-col items-end gap-2 pr-1">
+                <div className="bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                  <span className="text-[9px] font-black text-slate-400 font-mono tracking-tighter">SECURE LINK</span>
                 </div>
-                <span className="text-[9px] font-black text-slate-300">v1.2.0</span>
+                <div className="flex -space-x-1">
+                  {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full border border-white bg-slate-200"></div>)}
+                </div>
               </div>
             </div>
           </div>
