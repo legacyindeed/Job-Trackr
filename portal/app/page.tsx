@@ -1,12 +1,10 @@
 'use client';
-// Build Trigger: Migration v1
-
-
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { getFirebaseAuth } from '../lib/firebase';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { Sidekick, SidekickSelector, PersonalityType } from '../components/Sidekick';
 
 // Icons as a component
 const Icon = ({ name, className }: { name: string; className?: string }) => {
@@ -71,6 +69,21 @@ function DashboardContent() {
   const [dailyTips, setDailyTips] = useState<string[]>([]);
   const [isAnonymized, setIsAnonymized] = useState(false);
 
+  // Sidekick State
+  const [personality, setPersonality] = useState<PersonalityType | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('trackr_personality') as PersonalityType;
+    }
+    return null;
+  });
+  const [sidekickEvent, setSidekickEvent] = useState<string | null>(null);
+
+  const handleSelectPersonality = (p: PersonalityType) => {
+    setPersonality(p);
+    localStorage.setItem('trackr_personality', p);
+    setSidekickEvent('welcome');
+  };
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -115,6 +128,7 @@ function DashboardContent() {
         setIsAddModalOpen(false);
         setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time' });
         fetchJobs();
+        setSidekickEvent('add_job');
       }
     } catch (e) {
       console.error(e);
@@ -195,6 +209,7 @@ function DashboardContent() {
   useEffect(() => {
     const rotateQuote = () => {
       setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+      setSidekickEvent('daily_mission');
     };
 
     // Initial set
@@ -495,10 +510,18 @@ function DashboardContent() {
         </div>
       </div>
 
-      <div className="mt-16 mb-12 flex justify-center px-8 text-center">
-        <p className="text-2xl italic text-slate-800 font-medium max-w-3xl leading-relaxed">
-          "{quote}"
-        </p>
+      <div className="mt-16 mb-12 flex justify-center px-8 text-center max-w-4xl mx-auto">
+        <div className="bg-white/40 backdrop-blur-sm border border-white/60 p-10 rounded-[3rem] shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 mb-4 bg-blue-50 px-4 py-1.5 rounded-full shadow-sm">
+              Active Daily Mission
+            </span>
+            <p className="text-3xl italic text-slate-900 font-bold leading-tight tracking-tight px-4 drop-shadow-sm">
+              "{quote}"
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -772,6 +795,18 @@ function DashboardContent() {
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
         </div>
+
+        {personality && (
+          <Sidekick
+            personality={personality}
+            event={sidekickEvent || undefined}
+            onClose={() => setSidekickEvent(null)}
+          />
+        )}
+
+        {!personality && (
+          <SidekickSelector onSelect={handleSelectPersonality} />
+        )}
       </main>
 
       {/* Add Modal */}
