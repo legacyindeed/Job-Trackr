@@ -77,13 +77,42 @@ function DashboardContent() {
     return null;
   });
   const [sidekickEvent, setSidekickEvent] = useState<string | null>(null);
+  const [aiMessage, setAiMessage] = useState<string>("");
+  const [isAiThinking, setIsAiThinking] = useState(false);
+
+  const fetchSidekickMessage = async (event: string, context?: any) => {
+    if (!personality) return;
+    setIsAiThinking(true);
+    try {
+      const res = await fetch('/api/sidekick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personality, event, context })
+      });
+      const data = await res.json();
+      setAiMessage(data.text);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
 
   useEffect(() => {
     if (sidekickEvent) {
-      const timer = setTimeout(() => setSidekickEvent(null), 8000);
+      const context = sidekickEvent === 'add_job' ? addForm : undefined;
+      fetchSidekickMessage(sidekickEvent, context);
+      const timer = setTimeout(() => setSidekickEvent(null), 12000);
       return () => clearTimeout(timer);
     }
   }, [sidekickEvent]);
+
+  // Initial AI Mission
+  useEffect(() => {
+    if (personality && activeTab === 'dashboard' && !aiMessage) {
+      fetchSidekickMessage('daily_mission');
+    }
+  }, [personality, activeTab]);
 
   const handleSelectPersonality = (p: PersonalityType) => {
     setPersonality(p);
@@ -215,8 +244,7 @@ function DashboardContent() {
 
   useEffect(() => {
     const rotateQuote = () => {
-      setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
-      setSidekickEvent('daily_mission');
+      fetchSidekickMessage('daily_mission');
     };
 
     // Initial set
@@ -804,16 +832,22 @@ function DashboardContent() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{personality} intel</span>
                   <div className="h-1 w-1 rounded-full bg-slate-300"></div>
                   <span className={`text-[10px] font-bold uppercase tracking-tight ${sidekickEvent ? 'text-blue-600' : 'text-slate-500'}`}>
-                    {sidekickEvent ? 'New Intel' : 'Daily Mission'}
+                    {sidekickEvent ? 'AI Analysis' : 'Daily Intelligence'}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic">
-                  "{sidekickEvent ? (
-                    personality === 'serge' ? (sidekickEvent === 'add_job' ? "ANOTHER ONE! You're building a fortress of opportunities! Keep firing those applications!" : sidekickEvent === 'welcome' ? "EYES FRONT! I'm Sarge, and I'm here to turn you into a job-landing machine!" : quote) :
-                      personality === 'jax' ? (sidekickEvent === 'add_job' ? "Nice. Another company to potentially ignore your emails for 3 weeks. Let's keep it going!" : sidekickEvent === 'welcome' ? "Hey. I'm Jax. I'll be your emotional support human/hypeman while you deal with HR robots." : quote) :
-                        personality === 'luna' ? (sidekickEvent === 'add_job' ? "A seed has been planted. Trust the process and remain centered as it grows." : sidekickEvent === 'welcome' ? "Welcome, seeker. I am Luna. We will find your path together, one application at a time." : quote) : quote
-                  ) : quote}"
-                </p>
+                <div className="relative">
+                  {isAiThinking && (
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center gap-2">
+                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                      <span className="text-[10px] font-bold text-blue-500 lowercase tracking-tighter">Thinking...</span>
+                    </div>
+                  )}
+                  <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic">
+                    "{aiMessage || quote}"
+                  </p>
+                </div>
               </div>
               <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
               <div className="hidden sm:flex flex-col items-end gap-1">
