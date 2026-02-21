@@ -363,6 +363,48 @@ function DashboardContent() {
 
   const renderDashboard = () => (
     <div className="space-y-6 text-slate-900">
+      {/* Sidekick Intelligence Banner */}
+      {personality && (
+        <div className="relative overflow-hidden bg-slate-900 rounded-[2rem] p-6 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl -ml-10 -mb-10"></div>
+
+          <div className="relative flex flex-col md:flex-row items-center gap-6">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/10 animate-pulse">
+              {personality === 'serge' && '🎖️'}
+              {personality === 'jax' && '🎸'}
+              {personality === 'luna' && '🌙'}
+            </div>
+
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
+                  {personality === 'serge' && "Serge's Strategic Orders"}
+                  {personality === 'jax' && "Jax's Daily Bullshit Filter"}
+                  {personality === 'luna' && "Luna's Spiritual Alignment"}
+                </span>
+                <div className="h-1 w-1 rounded-full bg-blue-400/50"></div>
+                <span className="text-[10px] font-bold text-slate-500">MISSION-001</span>
+              </div>
+              <p className="text-xl md:text-2xl font-bold leading-tight tracking-tight text-slate-100 italic">
+                "{quote}"
+              </p>
+            </div>
+
+            <div className="hidden lg:block h-12 w-px bg-white/10 mx-4"></div>
+
+            <div className="hidden lg:flex flex-col items-end">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Target Intensity</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className={`h-1 w-4 rounded-full ${i <= 3 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error Banner */}
       {serverError && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -510,19 +552,6 @@ function DashboardContent() {
         </div>
       </div>
 
-      <div className="mt-16 mb-12 flex justify-center px-8 text-center max-w-4xl mx-auto">
-        <div className="bg-white/40 backdrop-blur-sm border border-white/60 p-10 rounded-[3rem] shadow-xl relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 mb-4 bg-blue-50 px-4 py-1.5 rounded-full shadow-sm">
-              Active Daily Mission
-            </span>
-            <p className="text-3xl italic text-slate-900 font-bold leading-tight tracking-tight px-4 drop-shadow-sm">
-              "{quote}"
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 
