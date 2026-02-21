@@ -144,11 +144,11 @@ function DashboardContent() {
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '' });
+  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '', url: '' });
 
   // Add State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time' });
+  const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '' });
 
   const handleAddSubmit = async () => {
     if (!user) return;
@@ -164,7 +164,7 @@ function DashboardContent() {
       });
       if (res.ok) {
         setIsAddModalOpen(false);
-        setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time' });
+        setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '' });
         fetchJobs();
         setSidekickEvent('add_job');
       }
@@ -371,7 +371,8 @@ function DashboardContent() {
       status: job.status || 'Applied',
       salary: job.salary || '',
       location: job.location || '',
-      notes: job.notes || ''
+      notes: job.notes || '',
+      url: job.url || ''
     });
     setIsEditModalOpen(true);
   };
@@ -593,7 +594,10 @@ function DashboardContent() {
                 onClick={() => window.open(job.url, '_blank')}
               >
                 <td className="px-6 py-4">
-                  <p className="text-sm text-slate-800 font-medium">{job.title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm text-slate-800 font-medium">{job.title}</p>
+                    {job.url && <span className="text-slate-300 text-[10px]" title={job.url}>🔗</span>}
+                  </div>
                   <p className="text-xs text-slate-400 font-medium">{job.company} • {job.location || 'Remote'}</p>
                 </td>
                 <td className="px-6 py-4">
@@ -954,6 +958,21 @@ function DashboardContent() {
                     </select>
                   </div>
                 </div>
+
+                {/* Job URL - full width */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Posting URL</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔗</span>
+                    <input
+                      type="url"
+                      placeholder="https://jobs.company.com/role"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.url}
+                      onChange={(e) => setAddForm({ ...addForm, url: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
@@ -1044,6 +1063,21 @@ function DashboardContent() {
                     value={editForm.location}
                     onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                   />
+                </div>
+
+                {/* Job URL - full width */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Posting URL</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔗</span>
+                    <input
+                      type="url"
+                      placeholder="https://jobs.company.com/role"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.url || ''}
+                      onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
