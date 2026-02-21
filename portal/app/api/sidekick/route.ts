@@ -27,38 +27,41 @@ const personalities = {
 export async function POST(req: Request) {
     try {
         const { personality, event, context } = await req.json();
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const char = personalities[personality as keyof typeof personalities] || personalities.jax;
 
         let prompt = `${char.basePrompt}\n\n`;
+        prompt += `CURRENT TIMESTAMP: ${new Date().toISOString()}-${Math.random()}\n`; // Force variety
 
         if (event === 'add_job') {
-            prompt += `The user just tracked a new job application: ${context?.title} at ${context?.company}. React specifically to this company or role.`;
-        } else if (event === 'daily_mission' || event === 'refresh') {
-            prompt += `Give the user a random bit of 'Intelligence'. This could be a tactical tip, a witty observation about corporate life, a motivational kick (if you're Serge), or a peaceful reflection (if you're Luna). 
-      Make it feel fresh and unique. It should be one of: [Tactical Intel, Command Center Update, Vibe Check, Strategic Brief, Sarcastic Reality, Zen Focus].`;
-        } else if (event === 'welcome') {
-            prompt += `Give a unique welcome message for their session.`;
+            prompt += `The user tracked ${context?.title} at ${context?.company}. React specifically to this.`;
+        } else {
+            prompt += `Generate a COMPLETELY NEW and UNIQUE piece of intelligence. 
+      Do NOT repeat previous themes. Be creative. 
+      Use one of these headers: [Tactical Intel, Command Center Update, Vibe Check, Strategic Brief, Sarcastic Reality, Zen Focus].`;
         }
 
-        prompt += `\n\nReturn the response as a JSON object with two fields: "header" (the type of intel, e.g., "Zen Focus" or "Command Update") and "text" (the actual message). Do not include any other text or markdown formatting in your response, just the raw JSON.`;
+        prompt += `\n\nReturn ONLY raw JSON: {"header": "...", "text": "..."}`;
+
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+            generationConfig: {
+                temperature: 1.0, // Maximum creativity
+                topP: 0.95,
+                topK: 40,
+            }
+        });
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const rawText = response.text().trim();
 
-        // Attempt to parse JSON, fallback if AI fails JSON format
         let data;
         try {
-            // Clean up potential markdown code blocks
             const cleanedJson = rawText.replace(/```json|```/g, '').trim();
             data = JSON.parse(cleanedJson);
         } catch (e) {
-            data = {
-                header: event === 'add_job' ? 'Live Alert' : 'Intelligence',
-                text: rawText.replace(/^"|"$/g, '')
-            };
+            data = { header: 'Update', text: rawText };
         }
 
         return NextResponse.json(data);
