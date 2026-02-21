@@ -783,7 +783,7 @@ function DashboardContent() {
           {activeTab === 'pipeline' && renderPipeline()}
         </div>
 
-        {personality && (
+        {activeTab === 'dashboard' && personality && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 pointer-events-none">
             <div className="bg-white/90 backdrop-blur-xl border border-slate-200/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto group">
               <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl shadow-sm border border-slate-100 ${personality === 'serge' ? 'bg-green-50' : personality === 'jax' ? 'bg-indigo-50' : 'bg-teal-50'
@@ -798,7 +798,7 @@ function DashboardContent() {
                   <div className="h-1 w-1 rounded-full bg-slate-300"></div>
                   <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tight">Daily Mission</span>
                 </div>
-                <p className="text-sm font-semibold text-slate-700 truncate group-hover:whitespace-normal transition-all duration-300">
+                <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
                   "{quote}"
                 </p>
               </div>
