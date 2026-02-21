@@ -78,6 +78,13 @@ function DashboardContent() {
   });
   const [sidekickEvent, setSidekickEvent] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (sidekickEvent) {
+      const timer = setTimeout(() => setSidekickEvent(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [sidekickEvent]);
+
   const handleSelectPersonality = (p: PersonalityType) => {
     setPersonality(p);
     localStorage.setItem('trackr_personality', p);
@@ -796,10 +803,16 @@ function DashboardContent() {
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{personality} intel</span>
                   <div className="h-1 w-1 rounded-full bg-slate-300"></div>
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tight">Daily Mission</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-tight ${sidekickEvent ? 'text-blue-600' : 'text-slate-500'}`}>
+                    {sidekickEvent ? 'New Intel' : 'Daily Mission'}
+                  </span>
                 </div>
-                <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
-                  "{quote}"
+                <p className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic">
+                  "{sidekickEvent ? (
+                    personality === 'serge' ? (sidekickEvent === 'add_job' ? "ANOTHER ONE! You're building a fortress of opportunities! Keep firing those applications!" : sidekickEvent === 'welcome' ? "EYES FRONT! I'm Sarge, and I'm here to turn you into a job-landing machine!" : quote) :
+                      personality === 'jax' ? (sidekickEvent === 'add_job' ? "Nice. Another company to potentially ignore your emails for 3 weeks. Let's keep it going!" : sidekickEvent === 'welcome' ? "Hey. I'm Jax. I'll be your emotional support human/hypeman while you deal with HR robots." : quote) :
+                        personality === 'luna' ? (sidekickEvent === 'add_job' ? "A seed has been planted. Trust the process and remain centered as it grows." : sidekickEvent === 'welcome' ? "Welcome, seeker. I am Luna. We will find your path together, one application at a time." : quote) : quote
+                  ) : quote}"
                 </p>
               </div>
               <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
@@ -814,322 +827,322 @@ function DashboardContent() {
           </div>
         )}
 
-        {personality && (
-          <Sidekick
-            personality={personality}
-            event={sidekickEvent || undefined}
-            onClose={() => setSidekickEvent(null)}
-          />
-        )}
-
         {!personality && (
           <SidekickSelector onSelect={handleSelectPersonality} />
         )}
       </main>
 
       {/* Add Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800">Add New Application</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <Icon name="x" className="w-5 h-5" />
-              </button>
-            </div>
+      {
+        isAddModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Add New Application</h3>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Job Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Frontend Engineer"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.title}
-                    onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
-                  />
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Frontend Engineer"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.title}
+                      onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Company *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Google"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.company}
+                      onChange={(e) => setAddForm({ ...addForm, company: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Company *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Google"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.company}
-                    onChange={(e) => setAddForm({ ...addForm, company: e.target.value })}
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.status}
+                      onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+                    >
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. New York, NY"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.location}
+                      onChange={(e) => setAddForm({ ...addForm, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. $120k"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.salary}
+                      onChange={(e) => setAddForm({ ...addForm, salary: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Type</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.jobType}
+                      onChange={(e) => setAddForm({ ...addForm, jobType: e.target.value })}
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Internship">Internship</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                  <select
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.status}
-                    onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                  >
-                    <option value="Applied">Applied</option>
-                    <option value="Interviewing">Interviewing</option>
-                    <option value="Offer">Offer</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddSubmit}
+                  disabled={!addForm.title || !addForm.company}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Entry
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Edit Modal */}
+      {
+        isEditModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Title</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Company</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.company}
+                      onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                    />
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    >
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="e.g. $120k"
+                      value={editForm.salary}
+                      onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
                   <input
                     type="text"
-                    placeholder="e.g. New York, NY"
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.location}
-                    onChange={(e) => setAddForm({ ...addForm, location: e.target.value })}
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
+                  <textarea
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. $120k"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.salary}
-                    onChange={(e) => setAddForm({ ...addForm, salary: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Job Type</label>
-                  <select
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={addForm.jobType}
-                    onChange={(e) => setAddForm({ ...addForm, jobType: e.target.value })}
-                  >
-                    <option value="Full-time">Full-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Internship">Internship</option>
-                  </select>
-                </div>
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Icon name="check" className="w-4 h-4" /> Save Changes
+                </button>
               </div>
-            </div>
-
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSubmit}
-                disabled={!addForm.title || !addForm.company}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create Entry
-              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <Icon name="x" className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Job Title</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Company</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={editForm.company}
-                    onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                  <select
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={editForm.status}
-                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  >
-                    <option value="Applied">Applied</option>
-                    <option value="Interviewing">Interviewing</option>
-                    <option value="Offer">Offer</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. $120k"
-                    value={editForm.salary}
-                    onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
-                <textarea
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
-                  value={editForm.notes}
-                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Icon name="check" className="w-4 h-4" /> Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Export Modal */}
-      {isExportModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800">Export Options</h3>
-              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <Icon name="x" className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="exportType"
-                    checked={exportConfig.type === '7d'}
-                    onChange={() => setExportConfig({ ...exportConfig, type: '7d' })}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-slate-700">Last 7 Days</span>
-                </label>
-                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="exportType"
-                    checked={exportConfig.type === '30d'}
-                    onChange={() => setExportConfig({ ...exportConfig, type: '30d' })}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-slate-700">Last 30 Days</span>
-                </label>
-                <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="exportType"
-                    checked={exportConfig.type === 'custom'}
-                    onChange={() => setExportConfig({ ...exportConfig, type: 'custom' })}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-slate-700">Custom Range (Max 90 days)</span>
-                </label>
+      {
+        isExportModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Export Options</h3>
+                <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
               </div>
 
-              {exportConfig.type === 'custom' && (
-                <div className="grid grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Start Date</label>
+              <div className="p-6 space-y-4">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
                     <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={exportConfig.startDate}
-                      onChange={(e) => setExportConfig({ ...exportConfig, startDate: e.target.value })}
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === '7d'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: '7d' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">End Date</label>
+                    <span className="text-sm font-medium text-slate-700">Last 7 Days</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
                     <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={exportConfig.endDate}
-                      onChange={(e) => setExportConfig({ ...exportConfig, endDate: e.target.value })}
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === '30d'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: '30d' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                     />
-                  </div>
+                    <span className="text-sm font-medium text-slate-700">Last 30 Days</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === 'custom'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: 'custom' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Custom Range (Max 90 days)</span>
+                  </label>
                 </div>
-              )}
-            </div>
 
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button
-                onClick={() => setIsExportModalOpen(false)}
-                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={performExport}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                Download CSV
-              </button>
+                {exportConfig.type === 'custom' && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={exportConfig.startDate}
+                        onChange={(e) => setExportConfig({ ...exportConfig, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">End Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={exportConfig.endDate}
+                        onChange={(e) => setExportConfig({ ...exportConfig, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={performExport}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  Download CSV
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
       {renderMobileNav()}
 
       {/* Mobile Floating Add Button */}
-      {activeTab === 'applications' && (
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center z-40 active:scale-90 transition-transform"
-        >
-          <Icon name="plus" className="w-6 h-6" />
-        </button>
-      )}
-    </div>
+      {
+        activeTab === 'applications' && (
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center z-40 active:scale-90 transition-transform"
+          >
+            <Icon name="plus" className="w-6 h-6" />
+          </button>
+        )
+      }
+    </div >
   );
 }
