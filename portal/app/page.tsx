@@ -822,9 +822,18 @@ function DashboardContent() {
 
         {activeTab === 'dashboard' && personality && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-6 pointer-events-none">
-            <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 pointer-events-auto">
-              {/* The Message Container */}
-              <div className="relative group text-center">
+            <div className="bg-white/95 backdrop-blur-2xl border border-slate-200/40 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2.5rem] p-8 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-10 duration-1000 pointer-events-auto group hover:shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition-all">
+
+              {/* Intel Header */}
+              {!isAiThinking && (
+                <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 bg-blue-50/50 rounded-full border border-blue-100/50">
+                  <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600/70">{aiHeader}</span>
+                </div>
+              )}
+
+              {/* The Message */}
+              <div className="relative w-full">
                 {isAiThinking && (
                   <div className="flex justify-center gap-2 mb-4">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -833,29 +842,22 @@ function DashboardContent() {
                   </div>
                 )}
 
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 leading-tight tracking-tight drop-shadow-sm italic px-4">
-                  "{aiMessage || "Initializing intelligence..."}"
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-snug tracking-tight drop-shadow-sm italic px-2">
+                  "{aiMessage || "Connecting to neural network..."}"
                 </h2>
-
-                {/* Secondary Intel Tag */}
-                {!isAiThinking && (
-                  <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-50/50 rounded-full border border-blue-100/50">
-                    <div className="w-1 h-1 rounded-full bg-blue-400"></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600/70">{aiHeader}</span>
-                  </div>
-                )}
               </div>
 
-              {/* The Sidekick Identity (Bottom) */}
-              <div className="flex flex-col items-center gap-1">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-3xl shadow-xl transition-transform duration-500 group-hover:scale-110 ${personality === 'serge' ? 'bg-emerald-500' : personality === 'jax' ? 'bg-indigo-500' : 'bg-teal-500'
+              {/* The Identity (Bottom) */}
+              <div className="mt-6 flex items-center gap-3 pt-4 border-t border-slate-100 w-full justify-center">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-2xl shadow-lg transition-transform duration-500 group-hover:scale-110 ${personality === 'serge' ? 'bg-emerald-500' : personality === 'jax' ? 'bg-indigo-500' : 'bg-teal-500'
                   }`}>
                   {personality === 'serge' && '🎖️'}
                   {personality === 'jax' && '🎸'}
                   {personality === 'luna' && '🌙'}
                 </div>
-                <div className="text-center">
-                  <h4 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">{personality}</h4>
+                <div className="flex flex-col items-start leading-none">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-0.5">{personality}</h4>
+                  <p className="text-[9px] font-bold text-blue-500/60 uppercase">Operational Mentor</p>
                 </div>
               </div>
             </div>

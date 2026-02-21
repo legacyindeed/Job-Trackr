@@ -31,14 +31,19 @@ export async function POST(req: Request) {
         const char = personalities[personality as keyof typeof personalities] || personalities.jax;
 
         let prompt = `${char.basePrompt}\n\n`;
-        prompt += `CURRENT TIMESTAMP: ${new Date().toISOString()}-${Math.random()}\n`; // Force variety
+        prompt += `CURRENT CONTEXT: Use high-tier, elite-level intelligence. Do NOT be generic. Be specific, tactical, or profoundly insightful about the tech industry, recruiters, or corporate culture.\n`;
+        prompt += `CRITICAL: Do NOT mention the word 'header', 'JSON', or your own formatting in the message text. Focus ONLY on the content of your observation.\n`;
+        prompt += `RANDOM SEED: ${new Date().toISOString()}-${Math.random()}\n`;
 
         if (event === 'add_job') {
-            prompt += `The user tracked ${context?.title} at ${context?.company}. React specifically to this.`;
+            prompt += `The user tracked ${context?.title} at ${context?.company}. Give an elite, sharp, and specific reaction to this specific company's reputation or the reality of this role.`;
         } else {
-            prompt += `Generate a COMPLETELY NEW and UNIQUE piece of intelligence. 
-      Do NOT repeat previous themes. Be creative. 
-      Use one of these headers: [Tactical Intel, Command Center Update, Vibe Check, Strategic Brief, Sarcastic Reality, Zen Focus].`;
+            prompt += `Generate a master-level bit of intelligence. 
+            If Jax: Give an incredibly sharp, biting, and accurate commentary on a specific modern corporate absurdity.
+            If Serge: Give an intense, high-stakes tactical directive that feels like an elite mission.
+            If Luna: Give a profound, high-level observation about career destiny and the flow of opportunity.
+            
+            Headers to pick from: [Tactical Brief, Cultural Reality, Vibe Analysis, Strategic Directive, Career Alignment].`;
         }
 
         prompt += `\n\nReturn ONLY raw JSON: {"header": "...", "text": "..."}`;
@@ -46,9 +51,10 @@ export async function POST(req: Request) {
         const model = genAI.getGenerativeModel({
             model: 'gemini-1.5-flash',
             generationConfig: {
-                temperature: 1.0, // Maximum creativity
+                temperature: 1.0,
                 topP: 0.95,
                 topK: 40,
+                maxOutputTokens: 150,
             }
         });
 
