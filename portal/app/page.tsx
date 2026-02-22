@@ -292,6 +292,37 @@ function DashboardContent() {
 
   const maxChartValue = Math.max(...chartData.map(d => d.value), 5); // Base of 5 for scaling
 
+  // Helper for smooth SVG path (Cubic Bezier)
+  const getSmoothPath = (data: any[], isArea = false) => {
+    if (data.length === 0) return '';
+    const points = data.map((d, i) => ({
+      x: (i / (data.length - 1)) * 100,
+      y: 100 - (d.value / maxChartValue) * 100
+    }));
+
+    let d = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? i : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 === points.length ? i + 1 : i + 2];
+
+      // Control points for smoothness
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+
+    if (isArea) {
+      d += ` L 100 100 L 0 100 Z`;
+    }
+    return d;
+  };
+
   const handleGoalChange = (newGoal: number) => {
     setDailyGoal(newGoal);
     localStorage.setItem('dailyGoal', newGoal.toString());
@@ -533,37 +564,29 @@ function DashboardContent() {
               <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
+                    <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
                   </linearGradient>
                 </defs>
 
                 {/* Grid Lines (Horizontal) */}
                 {[0, 25, 50, 75, 100].map(pct => (
-                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f1f5f9" strokeWidth="0.5" />
+                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f8fafc" strokeWidth="0.5" />
                 ))}
 
                 {/* Area under the line */}
                 <path
-                  d={`M 0 100 ${chartData.map((d, i) => {
-                    const x = (i / (chartData.length - 1)) * 100;
-                    const y = 100 - (d.value / maxChartValue) * 100;
-                    return `L ${x} ${y}`;
-                  }).join(' ')} L 100 100 Z`}
+                  d={getSmoothPath(chartData, true)}
                   fill="url(#chartGradient)"
                   className="transition-all duration-700 ease-in-out"
                 />
 
                 {/* The Line */}
                 <path
-                  d={`M ${chartData[0] ? `0 ${100 - (chartData[0].value / maxChartValue) * 100}` : '0 100'} ${chartData.map((d, i) => {
-                    const x = (i / (chartData.length - 1)) * 100;
-                    const y = 100 - (d.value / maxChartValue) * 100;
-                    return `L ${x} ${y}`;
-                  }).join(' ')}`}
+                  d={getSmoothPath(chartData)}
                   fill="none"
-                  stroke="#2563eb"
-                  strokeWidth="2"
+                  stroke="#0f172a"
+                  strokeWidth="1.25"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="transition-all duration-700 ease-in-out"
@@ -578,8 +601,8 @@ function DashboardContent() {
                       <circle
                         cx={x}
                         cy={y}
-                        r={chartTimeframe === '30d' ? "1" : "1.5"}
-                        className={`fill-white stroke-blue-600 stroke-[1.5px] cursor-pointer transition-all duration-300 ${hoveredPoint?.raw === d.raw ? 'r-[3]' : ''}`}
+                        r={chartTimeframe === '30d' ? "0.75" : "1.25"}
+                        className={`fill-white stroke-slate-900 stroke-[1px] cursor-pointer transition-all duration-300 ${hoveredPoint?.raw === d.raw ? 'r-[2.5]' : ''}`}
                       />
                       {/* Interaction Area (Invisible) */}
                       <rect x={x - 2} y="0" width="4" height="100" fill="transparent" className="cursor-pointer" />
