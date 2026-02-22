@@ -45,10 +45,14 @@ function isJobPage() {
         'workforcenow.adp.com',
         'adp.com',
         'pinpointhq.com',
-        'rippling.com'
+        'rippling.com',
+        'societegenerale.com'
     ];
 
-    const keywords = ['/job/', '/jobs/', '/career/', '/careers/', '/apply', '/vacancy/', '/position/', '/posting/'];
+    const keywords = [
+        '/job/', '/jobs/', '/career/', '/careers/', '/apply',
+        '/vacancy/', '/position/', '/posting/', '/job-offers/'
+    ];
 
     // Check known domains
     const domainMatch = knownDomains.some(domain => url.includes(domain));
@@ -255,6 +259,34 @@ function extractJobDetails() {
         }
     }
 
+    // 1.2. Specific Taleo Logic
+    if (window.location.hostname.includes('taleo.net')) {
+        // Taleo is notoriously difficult with dynamic IDs
+        const taleoTitle = document.querySelector('[id*="reqTitle"]') ||
+            document.querySelector('.jobTitle') ||
+            document.querySelector('h1.contentcolumn');
+        if (taleoTitle) title = clean(taleoTitle.textContent);
+
+        const taleoLoc = document.querySelector('[id*="reqLocation"]') ||
+            document.querySelector('.jobLocation') ||
+            document.querySelector('[id*="location"]');
+        if (taleoLoc) location = clean(taleoLoc.textContent);
+
+        const taleoType = document.querySelector('[id*="reqEmploymentStatus"]') ||
+            document.querySelector('[id*="jobtype"]');
+        if (taleoType) jobType = clean(taleoType.textContent);
+    }
+
+    // 1.3. Specific Societe Generale Logic
+    if (window.location.hostname.includes('societegenerale.com')) {
+        const sgTitle = document.querySelector('h1') || document.querySelector('.job-title');
+        if (sgTitle) title = clean(sgTitle.textContent);
+
+        // Location is often in a specific div or metadata
+        const sgLoc = document.querySelector('.job-location') || document.querySelector('.location');
+        if (sgLoc) location = clean(sgLoc.textContent);
+    }
+
     // 1.5. Specific Jobvite Logic (since it often fails generic checks)
     if (window.location.hostname.includes('jobvite.com')) {
         const jvTitle = document.querySelector('.jv-header') || document.querySelector('.jv-job-detail-header h2');
@@ -433,6 +465,9 @@ function extractJobDetails() {
             '[data-automation-id="jobPostingDescription"]', // Workday
             '#content.job-description', // Greenhouse
             '.job-description', // Greenhouse/Generic
+            '[id*="requisitionDescription"]', // Taleo
+            '[id*="jobDescription"]', // Taleo
+            '.editablesection', // Taleo
             '.ashby-job-description', // Ashby
             '.ashby-job-description-content', // Ashby
             '[class*="ashby-job-description"]', // Ashby fuzzy match
@@ -503,6 +538,26 @@ function extractJobDetails() {
 }
 
 function parseCompany(hostname, pathname) {
+    const customMappings = {
+        'societegenerale.com': 'Societe Generale',
+        'linkedin.com': 'LinkedIn',
+        'glassdoor.com': 'Glassdoor',
+        'indeed.com': 'Indeed',
+        'google.com': 'Google',
+        'microsoft.com': 'Microsoft',
+        'amazon.com': 'Amazon',
+        'apple.com': 'Apple',
+        'facebook.com': 'Meta',
+        'meta.com': 'Meta',
+        'tiktok.com': 'TikTok',
+        'adp.com': 'ADP'
+    };
+
+    // Check custom mappings first
+    for (const [domain, name] of Object.entries(customMappings)) {
+        if (hostname.includes(domain)) return name;
+    }
+
     // Handle specific ATS subdomains
     if (hostname.includes('myworkdayjobs.com')) {
         return capitalizeFirstLetter(hostname.split('.')[0]);
@@ -583,6 +638,13 @@ function parseCompany(hostname, pathname) {
     // Remove 'www'
     if (parts[0] === 'www') parts.shift();
 
+    // Taleo specific: tas-company.taleo.net or company.taleo.net
+    if (hostname.includes('taleo.net')) {
+        let taleoPart = parts[0];
+        if (taleoPart.startsWith('tas-')) taleoPart = taleoPart.replace('tas-', '');
+        return capitalizeFirstLetter(taleoPart);
+    }
+
     if (parts.length > 2) {
         // e.g. company.smartrecruiters.com -> company
         if (hostname.includes('smartrecruiters.com') && !hostname.startsWith('jobs.')) {
@@ -630,8 +692,8 @@ if (isJobPage()) {
         const isIgnored = ignored.includes(currentUrl);
 
         if (!isSaved && !isIgnored) {
-            // Delay slightly to ensure page load stabilizes?
-            setTimeout(injectTrackerOverlay, 1500);
+            // Delay slightly to ensure page load stabilizes - some sites like Taleo need more time
+            setTimeout(injectTrackerOverlay, 2500);
         }
     });
 }
