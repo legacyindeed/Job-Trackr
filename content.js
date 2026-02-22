@@ -430,6 +430,9 @@ function extractJobDetails() {
             '.show-more-less-html__markup', // LinkedIn
             '.jobs-description__container', // LinkedIn
             '[data-automation-id="jobPostingDescription"]', // Workday
+            '.ashby-job-description', // Ashby
+            '.ashby-job-description-content', // Ashby
+            '[data-testid="job-description"]', // Ashby/Generic
             '.job-description', // Generic
             '#job-description', // Generic
             '.description', // Generic
@@ -438,14 +441,14 @@ function extractJobDetails() {
             '.job-detail-description', // Pinpoint
             '.jd-container', // Generic
             'article', // Semantic fallback
+            '.main-content', // Generic
             'main' // Last resort
         ];
 
         for (const selector of descSelectors) {
             const el = document.querySelector(selector);
-            if (el) {
-                // If it's a huge element like 'main', ensure it doesn't contain the whole page
-                // But for most specific selectors, we want the HTML or clean text
+            if (el && el.innerText.trim().length > 50) {
+                // Ensure it's not just a tiny label but actual content
                 description = el.innerHTML;
                 break;
             }

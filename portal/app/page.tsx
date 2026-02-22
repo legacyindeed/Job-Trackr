@@ -775,7 +775,7 @@ function DashboardContent() {
                   {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-end gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEditClick(job); }}
                       className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -783,15 +783,13 @@ function DashboardContent() {
                     >
                       <Icon name="edit" className="w-4 h-4" />
                     </button>
-                    {job.description && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description); }}
-                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-                        title="View Job Description"
-                      >
-                        <Icon name="book" className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description || ''); }}
+                      className={`p-2 rounded-lg transition-all ${job.description ? 'text-slate-400 hover:text-purple-600 hover:bg-purple-50' : 'text-slate-200 cursor-default hover:bg-slate-50'}`}
+                      title={job.description ? "View Job Description" : "No description available"}
+                    >
+                      <Icon name="book" className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
@@ -849,22 +847,20 @@ function DashboardContent() {
                       <h5 className="text-sm font-medium text-slate-800 leading-snug">{job.title}</h5>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
-                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-opacity p-1 -mt-1 -mr-1"
+                        className="text-slate-300 hover:text-red-500 transition-colors p-1 -mt-1 -mr-1"
                       >
                         <Icon name="trash" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <p className="text-sm text-slate-500 mb-2 font-medium">{job.company}</p>
 
-                    {job.description && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description); }}
-                        className="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-purple-600 transition-colors uppercase tracking-tight"
-                      >
-                        <Icon name="book" className="w-3 h-3" />
-                        View Description
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description || ''); }}
+                      className={`mb-3 flex items-center gap-1.5 text-[10px] font-bold transition-colors uppercase tracking-tight ${job.description ? 'text-slate-400 hover:text-purple-600' : 'text-slate-200 cursor-default'}`}
+                    >
+                      <Icon name="book" className="w-3 h-3" />
+                      {job.description ? 'View Description' : 'No Description'}
+                    </button>
 
                     <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
                       <span className="flex items-center gap-1">
