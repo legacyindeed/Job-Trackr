@@ -43,7 +43,8 @@ function isJobPage() {
         'otta.com',
         'lifeattiktok.com',
         'workforcenow.adp.com',
-        'adp.com'
+        'adp.com',
+        'pinpointhq.com'
     ];
 
     const keywords = ['/job/', '/jobs/', '/career/', '/careers/', '/apply', '/vacancy/', '/position/', '/posting/'];
@@ -296,6 +297,29 @@ function extractJobDetails() {
         }
     }
 
+    // 2.5. Pinpoint HQ Logic
+    if (window.location.hostname.includes('pinpointhq.com')) {
+        const pinTitle = document.querySelector('h1') || document.querySelector('.postings-title') || document.querySelector('h2');
+        if (pinTitle) {
+            let t = clean(pinTitle.textContent);
+            if (t.toLowerCase() !== 'apply' && t.toLowerCase() !== 'new application') {
+                title = t.replace('New Application |', '').trim();
+            }
+        }
+
+        if (!title || title.toLowerCase() === 'apply') {
+            title = clean(document.title.replace('New Application |', '').split('|')[0]);
+        }
+
+        // Location is usually in a list or meta
+        const pinLoc = document.querySelector('.pinpoint-job-location') || document.querySelector('.job-location');
+        if (pinLoc) location = clean(pinLoc.textContent);
+
+        // Job Type
+        const pinType = document.querySelector('.pinpoint-job-type') || document.querySelector('.job-type');
+        if (pinType) jobType = clean(pinType.textContent);
+    }
+
     // 2. Heuristic Search
     const bodyText = document.body.innerText;
 
@@ -418,6 +442,12 @@ function parseCompany(hostname, pathname) {
             const pathParts = pathname.split('/').filter(p => p);
             if (pathParts.length > 0) return capitalizeFirstLetter(pathParts[0]);
         }
+    }
+
+    // Pinpoint HQ
+    if (hostname.includes('pinpointhq.com')) {
+        // e.g. icario.pinpointhq.com
+        return capitalizeFirstLetter(hostname.split('.')[0]);
     }
 
     // Standard heuristic
