@@ -508,7 +508,7 @@ function DashboardContent() {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-sm font-medium text-slate-800">Daily Goal</h3>
-                <p className="text-[10px] text-slate-500">Track {dailyGoal} positions today</p>
+                <p className="text-[10px] text-slate-500">Apply: {dailyGoal} positions today</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">

@@ -77,7 +77,7 @@ function injectTrackerOverlay() {
     <p title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
       <button class="btn-ignore">Not Now</button>
-      <button class="btn-track">Yes, Track This</button>
+      <button class="btn-track">Yes, Apply This</button>
     </div>
   `;
 
