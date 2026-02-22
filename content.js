@@ -74,13 +74,24 @@ function injectTrackerOverlay() {
     overlay.id = 'job-tracker-overlay';
 
     // Extract rudimentary details
+    const details = extractJobDetails();
     const pageTitle = document.title || 'Unknown Job';
-    const displayTitle = pageTitle;
+
+    // Use extracted title if it exists, otherwise fall back to cleaned page title
+    let displayTitle = details.title || pageTitle.split('-')[0].split('|')[0].trim();
+
+    // Clean common prefixes for the preview too
+    const prefixes = ['Job Application for', 'Application for', 'Apply for', 'Careers at'];
+    const prefixPattern = new RegExp(`^(${prefixes.join('|')})\\s+`, 'i');
+    displayTitle = displayTitle.replace(prefixPattern, '').trim();
 
     overlay.innerHTML = `
     <button class="close-btn">&times;</button>
-    <h3><span style="font-size: 1.2em;">💼</span> Job Application Detected</h3>
-    <p title="${pageTitle}">${displayTitle}</p>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <span style="font-size: 24px;">💼</span>
+        <h3 style="margin: 0; font-size: 16px; color: #1e293b;">Job Application Detected</h3>
+    </div>
+    <p style="margin: 0 0 16px 0; color: #64748b; font-weight: 600; font-size: 14px;" title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
       <button class="btn-ignore">Did Not Apply</button>
       <button class="btn-track">Yes, I Applied</button>
@@ -259,6 +270,14 @@ function extractJobDetails() {
         }
     }
 
+    // 1.2. Specific Workday or ATS Checks BEFORE generic return
+    if (window.location.hostname.includes('myworkdayjobs.com')) {
+        const wdTitle = document.querySelector('[data-automation-id="jobPostingHeader"]') ||
+            document.querySelector('h2') ||
+            document.querySelector('.GCW0012D-TITLE');
+        if (wdTitle) title = clean(wdTitle.textContent);
+    }
+
     // 1.2. Specific Taleo Logic
     if (window.location.hostname.includes('taleo.net')) {
         // Taleo is notoriously difficult with dynamic IDs
@@ -287,13 +306,6 @@ function extractJobDetails() {
         if (sgLoc) location = clean(sgLoc.textContent);
     }
 
-    // 1.4. Specific Workday Logic
-    if (window.location.hostname.includes('myworkdayjobs.com')) {
-        const wdTitle = document.querySelector('[data-automation-id="jobPostingHeader"]') ||
-            document.querySelector('h2') ||
-            document.querySelector('.GCW0012D-TITLE');
-        if (wdTitle) title = clean(wdTitle.textContent);
-    }
 
     // 1.5. Specific Jobvite Logic (since it often fails generic checks)
     if (window.location.hostname.includes('jobvite.com')) {
