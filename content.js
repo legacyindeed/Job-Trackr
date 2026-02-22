@@ -93,6 +93,7 @@ function injectTrackerOverlay() {
     </div>
     <p style="margin: 0 0 16px 0; color: #64748b; font-weight: 600; font-size: 14px;" title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
+      <button class="btn-autofill">Autofill Application</button>
       <button class="btn-ignore">Did Not Apply</button>
       <button class="btn-track">Yes, I Applied</button>
     </div>
@@ -104,6 +105,29 @@ function injectTrackerOverlay() {
     const closeBtn = overlay.querySelector('.close-btn');
     const ignoreBtn = overlay.querySelector('.btn-ignore');
     const trackBtn = overlay.querySelector('.btn-track');
+    const autofillBtn = overlay.querySelector('.btn-autofill');
+
+    autofillBtn.addEventListener('click', () => {
+        autofillBtn.textContent = 'Fetching...';
+        chrome.runtime.sendMessage({ action: "getProfile" }, (response) => {
+            if (response && response.profile) {
+                autofillForm(response.profile);
+                autofillBtn.textContent = 'Autofilled!';
+                autofillBtn.style.backgroundColor = '#10b981';
+                setTimeout(() => {
+                    autofillBtn.textContent = 'Autofill Application';
+                    autofillBtn.style.backgroundColor = '';
+                }, 2000);
+            } else {
+                autofillBtn.textContent = 'Login to Portal';
+                autofillBtn.style.backgroundColor = '#ef4444';
+                setTimeout(() => {
+                    autofillBtn.textContent = 'Autofill Application';
+                    autofillBtn.style.backgroundColor = '';
+                }, 3000);
+            }
+        });
+    });
 
     closeBtn.addEventListener('click', () => {
         overlay.remove();
@@ -195,6 +219,72 @@ function injectTrackerOverlay() {
             });
         });
     });
+}
+
+function autofillForm(profile) {
+    if (!profile) return;
+
+    // Helper to set value and trigger events
+    const setVal = (el, val) => {
+        if (!el || !val) return;
+        el.value = val;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    // 1. Common Personal Fields Mapping
+    const personalMappings = {
+        'full_name': ['input[name*="name"]', 'input[id*="name"]', 'input[autocomplete*="name"]'],
+        'first_name': ['input[name*="first"]', 'input[id*="first"]'],
+        'last_name': ['input[name*="last"]', 'input[id*="last"]'],
+        'email': ['input[type="email"]', 'input[name*="email"]', 'input[id*="email"]'],
+        'phone': ['input[type="tel"]', 'input[name*="phone"]', 'input[id*="phone"]', 'input[name*="mobile"]'],
+        'linkedin': ['input[name*="linkedin"]', 'input[id*="linkedin"]', 'input[placeholder*="linkedin"]'],
+        'portfolio': ['input[name*="portfolio"]', 'input[name*="website"]', 'input[id*="website"]', 'input[placeholder*="website"]'],
+        'github': ['input[name*="github"]', 'input[id*="github"]', 'input[placeholder*="github"]']
+    };
+
+    // Split full name if needed
+    const names = (profile.full_name || '').split(' ');
+    const firstName = names[0] || '';
+    const lastName = names.slice(1).join(' ') || '';
+
+    // Loop through mappings
+    Object.entries(personalMappings).forEach(([key, selectors]) => {
+        let value = profile[key];
+        if (key === 'first_name') value = firstName;
+        if (key === 'last_name') value = lastName;
+
+        selectors.forEach(selector => {
+            const inputs = document.querySelectorAll(selector);
+            inputs.forEach(input => {
+                if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+                    // Only fill if empty to avoid overwriting user edits
+                    if (!input.value) {
+                        setVal(input, value);
+                    }
+                }
+            });
+        });
+    });
+
+    // 2. Work History (Simplified for now - focus on latest role)
+    if (profile.work_history && profile.work_history.length > 0) {
+        const latest = profile.work_history[0];
+        const workSelectors = {
+            'company': ['input[name*="company"]', 'input[id*="company"]', 'input[name*="org"]'],
+            'title': ['input[name*="title"]', 'input[id*="title"]']
+        };
+
+        Object.entries(workSelectors).forEach(([key, selectors]) => {
+            selectors.forEach(selector => {
+                const inputs = document.querySelectorAll(selector);
+                inputs.forEach(input => {
+                    if (!input.value) setVal(input, latest[key]);
+                });
+            });
+        });
+    }
 }
 
 function extractJobDetails() {

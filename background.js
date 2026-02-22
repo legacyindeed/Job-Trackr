@@ -53,4 +53,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Job saved:", request.data);
     sendResponse({ status: "success" });
   }
+
+  if (request.action === "getProfile") {
+    chrome.storage.local.get(['firebaseToken'], (result) => {
+      const token = result.firebaseToken;
+      if (!token) {
+        sendResponse({ error: 'Not logged in. Please log in to the portal first.' });
+        return;
+      }
+
+      const API_URL = 'http://localhost:3000/api/user/profile'; // Developer local mode
+      // const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile'; // Production
+
+      fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(res => res.json())
+        .then(data => sendResponse({ profile: data }))
+        .catch(err => {
+          console.error('Profile fetch error:', err);
+          sendResponse({ error: 'Failed to fetch profile' });
+        });
+    });
+    return true; // Keep channel open
+  }
 });

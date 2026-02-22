@@ -25,6 +25,7 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
     case 'eye-slash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
     case 'plus': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
     case 'book': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>;
+    case 'user': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
     case 'pipeline': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3zM8 12h8M12 8v8"></path></svg>;
     default: return null;
   }
@@ -100,6 +101,78 @@ function DashboardContent() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '', description: '' });
   const [viewingDescription, setViewingDescription] = useState<string | null>(null);
+
+  // Profile State
+  const [profile, setProfile] = useState<any>({
+    full_name: '',
+    email: '',
+    phone: '',
+    linkedin: '',
+    portfolio: '',
+    github: '',
+    resume_text: '',
+    work_history: [],
+    education: []
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState({ text: '', type: '' });
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/user/profile', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+      if (data) {
+        setProfile({
+          ...data,
+          work_history: typeof data.work_history === 'string' ? JSON.parse(data.work_history) : (data.work_history || []),
+          education: typeof data.education === 'string' ? JSON.parse(data.education) : (data.education || [])
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching profile:', e);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    setProfileMessage({ text: '', type: '' });
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(profile)
+      });
+      if (res.ok) {
+        setProfileMessage({ text: 'Profile saved successfully!', type: 'success' });
+        setTimeout(() => setProfileMessage({ text: '', type: '' }), 3000);
+      } else {
+        throw new Error('Failed to save profile');
+      }
+    } catch (e) {
+      setProfileMessage({ text: 'Failed to save profile. Please try again.', type: 'error' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const addWorkEntry = () => {
+    const newEntry = { company: '', title: '', startDate: '', endDate: '', description: '', current: false };
+    setProfile({ ...profile, work_history: [newEntry, ...profile.work_history] });
+  };
+
+  const addEducationEntry = () => {
+    const newEntry = { school: '', degree: '', startDate: '', endDate: '' };
+    setProfile({ ...profile, education: [newEntry, ...profile.education] });
+  };
 
   const handleAddSubmit = async () => {
     if (!user) return;
@@ -189,6 +262,7 @@ function DashboardContent() {
 
       claimJobs();
       fetchJobs();
+      fetchProfile();
       const interval = setInterval(fetchJobs, 10000);
       return () => clearInterval(interval);
     }
@@ -879,6 +953,318 @@ function DashboardContent() {
     );
   };
 
+  const renderProfile = () => {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-2">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900 heading-font">Career Profile</h2>
+            <p className="text-slate-500 font-medium">Auto-populate job applications with your saved details.</p>
+          </div>
+          <button
+            onClick={saveProfile}
+            disabled={isSavingProfile}
+            className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-xl shadow-slate-200 disabled:opacity-50"
+          >
+            {isSavingProfile ? (
+              <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              <Icon name="check" className="w-5 h-5" />
+            )}
+            {isSavingProfile ? 'Saving...' : 'Save Profile'}
+          </button>
+        </div>
+
+        {profileMessage.text && (
+          <div className={`p-4 rounded-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${profileMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${profileMessage.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+              <Icon name={profileMessage.type === 'success' ? 'check' : 'alert'} className="w-5 h-5" />
+            </div>
+            <p className="font-bold text-sm tracking-tight">{profileMessage.text}</p>
+          </div>
+        )}
+
+        {/* Personal Details */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 heading-font">
+            <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-sm">01</span>
+            Personal Details
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+              <input
+                type="text"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.full_name}
+                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              <input
+                type="email"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.email}
+                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                placeholder="john@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+              <input
+                type="tel"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Social Links */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 heading-font">
+            <span className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-sm">02</span>
+            Socials & Links
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">LinkedIn URL</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.linkedin}
+                onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+                placeholder="linkedin.com/in/username"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Portfolio or Website</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.portfolio}
+                onChange={(e) => setProfile({ ...profile, portfolio: e.target.value })}
+                placeholder="yourportfolio.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">GitHub URL</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.github}
+                onChange={(e) => setProfile({ ...profile, github: e.target.value })}
+                placeholder="github.com/username"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Work History */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3 heading-font">
+              <span className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center text-sm">03</span>
+              Work Experience
+            </h3>
+            <button
+              onClick={addWorkEntry}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-3.5 h-3.5" /> Add Experience
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {profile.work_history.map((work: any, index: number) => (
+              <div key={index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30 relative group animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={() => {
+                    const newHistory = [...profile.work_history];
+                    newHistory.splice(index, 1);
+                    setProfile({ ...profile, work_history: newHistory });
+                  }}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Company</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.company}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].company = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Acme Corp"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Job Title</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.title}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].title = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Senior Developer"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Start Date</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.startDate}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].startDate = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Jan 2020"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">End Date</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.endDate}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].endDate = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Present"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Achievements</label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all resize-none"
+                      value={work.description}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].description = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="Briefly describe your impact..."
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {profile.work_history.length === 0 && (
+              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <p className="text-slate-400 text-sm font-medium italic">No work experience added yet.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Education */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3 heading-font">
+              <span className="w-8 h-8 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center text-sm">04</span>
+              Education
+            </h3>
+            <button
+              onClick={addEducationEntry}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-3.5 h-3.5" /> Add School
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {profile.education.map((edu: any, index: number) => (
+              <div key={index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30 relative group animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={() => {
+                    const newEdu = [...profile.education];
+                    newEdu.splice(index, 1);
+                    setProfile({ ...profile, education: newEdu });
+                  }}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Institution</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.school}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].school = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. Stanford University"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Degree / Major</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.degree}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].degree = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. BS in Computer Science"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Started</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.startDate}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].startDate = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. Sep 2016"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Graduated</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.endDate}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].endDate = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. June 2020"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {profile.education.length === 0 && (
+              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <p className="text-slate-400 text-sm font-medium italic">No education added yet.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  };
+
   const renderMobileNav = () => (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 pb-safe">
       <button
@@ -901,6 +1287,13 @@ function DashboardContent() {
       >
         <Icon name="pipeline" className="w-6 h-6" />
         Pipeline
+      </button>
+      <button
+        onClick={() => handleTabChange('profile')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="user" className="w-6 h-6" />
+        Profile
       </button>
     </div>
   );
@@ -935,6 +1328,10 @@ function DashboardContent() {
           <button onClick={() => handleTabChange('pipeline')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pipeline' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
             <Icon name="pipeline" className="w-5 h-5" />
             Pipeline
+          </button>
+          <button onClick={() => handleTabChange('profile')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="user" className="w-5 h-5" />
+            Profile (Autofill)
           </button>
         </nav>
 
@@ -998,6 +1395,7 @@ function DashboardContent() {
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
+          {activeTab === 'profile' && renderProfile()}
         </div>
       </main>
 

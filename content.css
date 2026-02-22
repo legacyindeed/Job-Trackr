@@ -76,8 +76,8 @@
 }
 
 #job-tracker-overlay .actions {
-  display: flex !important;
-  justify-content: flex-end !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 10px !important;
   margin-top: 4px !important;
 }
@@ -92,6 +92,24 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+#job-tracker-overlay .btn-autofill {
+  grid-column: span 2 !important;
+  background: #0f172a !important;
+  color: white !important;
+  margin-bottom: 4px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  padding: 12px 20px !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1) !important;
+}
+
+#job-tracker-overlay .btn-autofill:hover {
+  background: #000000 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
 #job-tracker-overlay .btn-track {
