@@ -12,6 +12,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       firebaseEmail: request.email
     });
     console.log("Auth token and email updated");
+    return;
   }
 
   if (request.action === "syncToSheet") {
@@ -45,13 +46,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         })
         .catch(err => console.error('Error syncing to portal. Are you logged in?', err));
     });
+    return;
   }
-});
 
-// Optional: Badge update or other logic could go here
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "saveJob") {
-    // Legacy support or future exp
     console.log("Job saved:", request.data);
     sendResponse({ status: "success" });
   }

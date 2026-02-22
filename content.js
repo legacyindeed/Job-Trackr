@@ -172,7 +172,9 @@ function injectTrackerOverlay() {
                 setTimeout(() => overlay.remove(), 2000);
 
                 // Sync to Google Sheet if configured
-                chrome.runtime.sendMessage({ action: "syncToSheet", job: jobData });
+                if (chrome.runtime?.id) {
+                    chrome.runtime.sendMessage({ action: "syncToSheet", job: jobData });
+                }
             });
         });
     });
@@ -188,8 +190,8 @@ function extractJobDetails() {
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
 
     // 1. Try to find JSON-LD (Structured Data) - Most reliable if present
-    const scribripts = document.querySelectorAll('script[type="application/ld+json"]');
-    for (const script of scribripts) {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of scripts) {
         try {
             const data = JSON.parse(script.textContent);
             // Check for JobPosting type
