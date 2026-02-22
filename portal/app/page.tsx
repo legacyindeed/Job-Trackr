@@ -561,17 +561,18 @@ function DashboardContent() {
             </div>
 
             <div className="relative h-48 w-full group">
+              {/* The Graph Layer */}
               <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
+                    <stop offset="0%" stopColor="#0f172a" stopOpacity="0.05" />
                     <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
                   </linearGradient>
                 </defs>
 
-                {/* Grid Lines (Horizontal) */}
+                {/* Grid Lines (Horizontal) - Ultra Light */}
                 {[0, 25, 50, 75, 100].map(pct => (
-                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f8fafc" strokeWidth="0.5" />
+                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f8fafc" strokeWidth="0.25" />
                 ))}
 
                 {/* Area under the line */}
@@ -581,35 +582,42 @@ function DashboardContent() {
                   className="transition-all duration-700 ease-in-out"
                 />
 
-                {/* The Line */}
+                {/* The Line - Hairline Thin */}
                 <path
                   d={getSmoothPath(chartData)}
                   fill="none"
-                  stroke="#0f172a"
-                  strokeWidth="1.25"
+                  stroke="#1e293b"
+                  strokeWidth="0.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="transition-all duration-700 ease-in-out"
                 />
-
-                {/* Interaction Points */}
-                {chartData.map((d, i) => {
-                  const x = (i / (chartData.length - 1)) * 100;
-                  const y = 100 - (d.value / maxChartValue) * 100;
-                  return (
-                    <g key={i} onMouseEnter={() => setHoveredPoint({ ...d, x, y })} onMouseLeave={() => setHoveredPoint(null)}>
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={chartTimeframe === '30d' ? "0.75" : "1.25"}
-                        className={`fill-white stroke-slate-900 stroke-[1px] cursor-pointer transition-all duration-300 ${hoveredPoint?.raw === d.raw ? 'r-[2.5]' : ''}`}
-                      />
-                      {/* Interaction Area (Invisible) */}
-                      <rect x={x - 2} y="0" width="4" height="100" fill="transparent" className="cursor-pointer" />
-                    </g>
-                  );
-                })}
               </svg>
+
+              {/* Interaction & Point Layer (HTML to prevent SVG stretching) */}
+              {chartData.map((d, i) => {
+                const x = (i / (chartData.length - 1)) * 100;
+                const y = 100 - (d.value / maxChartValue) * 100;
+                const isHovered = hoveredPoint?.raw === d.raw;
+
+                return (
+                  <div
+                    key={i}
+                    className="absolute group/point"
+                    style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
+                    onMouseEnter={() => setHoveredPoint({ ...d, x, y })}
+                    onMouseLeave={() => setHoveredPoint(null)}
+                  >
+                    {/* The Dot */}
+                    <div
+                      className={`rounded-full bg-white border border-slate-900 transition-all duration-300 ${isHovered ? 'w-2 h-2' : 'w-1 h-1'} shadow-sm`}
+                    />
+
+                    {/* Interaction Bridge (Invisible tall area) */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-48 cursor-pointer" />
+                  </div>
+                );
+              })}
 
               {/* Tooltip */}
               {hoveredPoint && (
