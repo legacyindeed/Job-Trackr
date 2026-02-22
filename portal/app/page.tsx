@@ -77,10 +77,9 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // URL Sync for Tabs
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['dashboard', 'applications', 'pipeline'].includes(tab)) {
+    if (tab && ['dashboard', 'applications', 'pipeline', 'profile'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
