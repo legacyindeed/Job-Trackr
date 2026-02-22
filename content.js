@@ -431,6 +431,8 @@ function extractJobDetails() {
             '.show-more-less-html__markup', // LinkedIn
             '.jobs-description__container', // LinkedIn
             '[data-automation-id="jobPostingDescription"]', // Workday
+            '#content.job-description', // Greenhouse
+            '.job-description', // Greenhouse/Generic
             '.ashby-job-description', // Ashby
             '.ashby-job-description-content', // Ashby
             '[class*="ashby-job-description"]', // Ashby fuzzy match
@@ -468,6 +470,26 @@ function extractJobDetails() {
             const metaDesc = document.querySelector('meta[property="og:description"]') ||
                 document.querySelector('meta[name="description"]');
             if (metaDesc) description = metaDesc.content;
+        }
+
+        // --- Post-Extraction Cleanup ---
+        // If we captured HTML, let's strip out application forms, inputs, and buttons
+        if (description && description.includes('<')) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = description;
+
+            // Remove common "junk" elements found in job postings
+            const junkSelectors = [
+                'form', '#application', '.application', 'input', 'button', 'select', 'textarea',
+                '.apply-container', '.apply-button', 'footer', 'header', 'nav',
+                'script', 'style', 'iframe', '.social-share', '.similar-jobs'
+            ];
+
+            junkSelectors.forEach(s => {
+                tempDiv.querySelectorAll(s).forEach(junk => junk.remove());
+            });
+
+            description = tempDiv.innerHTML.trim();
         }
     }
 
