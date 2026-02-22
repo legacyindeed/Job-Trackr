@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { getFirebaseAuth } from '../lib/firebase';
@@ -67,6 +67,8 @@ function DashboardContent() {
   const [quote, setQuote] = useState('');
   const [dailyTips, setDailyTips] = useState<string[]>([]);
   const [isAnonymized, setIsAnonymized] = useState(false);
+  const [chartTimeframe, setChartTimeframe] = useState<'7d' | '30d' | '12m'>('7d');
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -249,6 +251,46 @@ function DashboardContent() {
   const velocityTrend = prevSevenDayCount > 0
     ? Math.round(((sevenDayCount - prevSevenDayCount) / prevSevenDayCount) * 100)
     : (sevenDayCount > 0 ? 100 : 0);
+
+  // --- Dynamic Activity Chart Logic ---
+  const chartData = useMemo(() => {
+    const data = [];
+    const now = new Date();
+
+    if (chartTimeframe === '7d' || chartTimeframe === '30d') {
+      const days = chartTimeframe === '7d' ? 7 : 30;
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toLocaleDateString();
+        const count = jobs.filter(j => new Date(j.date).toLocaleDateString() === dateStr).length;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: count,
+          raw: dateStr
+        });
+      }
+    } else {
+      // 12 months
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const month = d.getMonth();
+        const year = d.getFullYear();
+        const count = jobs.filter(j => {
+          const jd = new Date(j.date);
+          return jd.getMonth() === month && jd.getFullYear() === year;
+        }).length;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          value: count,
+          raw: `${month}-${year}`
+        });
+      }
+    }
+    return data;
+  }, [jobs, chartTimeframe]);
+
+  const maxChartValue = Math.max(...chartData.map(d => d.value), 5); // Base of 5 for scaling
 
   const handleGoalChange = (newGoal: number) => {
     setDailyGoal(newGoal);
@@ -462,9 +504,119 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Motivational Quote & Tips */}
+        {/* Momentum & Tips */}
         <div className="space-y-6">
+          {/* Application Momentum Line Graph */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Icon name="pipeline" className="w-5 h-5 text-blue-500 rotate-90" />
+                  Application Momentum
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">Application trends over time</p>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-lg">
+                {(['7d', '30d', '12m'] as const).map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setChartTimeframe(tf)}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartTimeframe === tf ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {tf.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            <div className="relative h-48 w-full group">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid Lines (Horizontal) */}
+                {[0, 25, 50, 75, 100].map(pct => (
+                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f1f5f9" strokeWidth="0.5" />
+                ))}
+
+                {/* Area under the line */}
+                <path
+                  d={`M 0 100 ${chartData.map((d, i) => {
+                    const x = (i / (chartData.length - 1)) * 100;
+                    const y = 100 - (d.value / maxChartValue) * 100;
+                    return `L ${x} ${y}`;
+                  }).join(' ')} L 100 100 Z`}
+                  fill="url(#chartGradient)"
+                  className="transition-all duration-700 ease-in-out"
+                />
+
+                {/* The Line */}
+                <path
+                  d={`M ${chartData[0] ? `0 ${100 - (chartData[0].value / maxChartValue) * 100}` : '0 100'} ${chartData.map((d, i) => {
+                    const x = (i / (chartData.length - 1)) * 100;
+                    const y = 100 - (d.value / maxChartValue) * 100;
+                    return `L ${x} ${y}`;
+                  }).join(' ')}`}
+                  fill="none"
+                  stroke="#2563eb"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="transition-all duration-700 ease-in-out"
+                />
+
+                {/* Interaction Points */}
+                {chartData.map((d, i) => {
+                  const x = (i / (chartData.length - 1)) * 100;
+                  const y = 100 - (d.value / maxChartValue) * 100;
+                  return (
+                    <g key={i} onMouseEnter={() => setHoveredPoint({ ...d, x, y })} onMouseLeave={() => setHoveredPoint(null)}>
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={chartTimeframe === '30d' ? "1" : "1.5"}
+                        className={`fill-white stroke-blue-600 stroke-[1.5px] cursor-pointer transition-all duration-300 ${hoveredPoint?.raw === d.raw ? 'r-[3]' : ''}`}
+                      />
+                      {/* Interaction Area (Invisible) */}
+                      <rect x={x - 2} y="0" width="4" height="100" fill="transparent" className="cursor-pointer" />
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Tooltip */}
+              {hoveredPoint && (
+                <div
+                  className="absolute pointer-events-none bg-slate-900 text-white p-2 rounded-lg text-[10px] shadow-xl z-20 animate-in fade-in zoom-in duration-150"
+                  style={{
+                    left: `${hoveredPoint.x}%`,
+                    top: `${hoveredPoint.y}%`,
+                    transform: `translate(${hoveredPoint.x > 80 ? '-100%' : hoveredPoint.x < 20 ? '0%' : '-50%'}, -120%)`
+                  }}
+                >
+                  <p className="font-bold whitespace-nowrap">{hoveredPoint.label}</p>
+                  <p className="opacity-80 font-medium text-blue-400">{hoveredPoint.value} Applications</p>
+                </div>
+              )}
+            </div>
+
+            {/* X-Axis Labels (Sparse if 30d) */}
+            <div className="flex justify-between mt-4">
+              {chartData.filter((_, i) => {
+                if (chartTimeframe === '30d') return i % 5 === 0 || i === chartData.length - 1;
+                if (chartTimeframe === '12m') return i % 2 === 0 || i === chartData.length - 1;
+                return true;
+              }).map((d, i) => (
+                <span key={i} className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                  {d.label}
+                </span>
+              ))}
+            </div>
+          </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
