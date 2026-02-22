@@ -138,6 +138,67 @@ function DashboardContent() {
       console.error('Error fetching profile:', e);
     }
   };
+  const [skillSearch, setSkillSearch] = useState('');
+  const allSuggestedSkills = useMemo(() => [
+    // --- STRATEGY ---
+    'Market Analysis', 'Competitive Intelligence', 'SWOT Analysis', 'Go-to-Market Strategy', 'Financial Modeling',
+    'Strategic Planning', 'Business Case Development', 'M&A Due Diligence', 'Value Proposition Design', 'Customer Segmentation',
+    'Corporate Strategy', 'Partnership Development', 'Growth Strategy', 'Pricing Strategy', 'Scenario Planning',
+    'Industry Research', 'Unit Economics', 'Profitability Analysis', 'Expansion Strategy', 'Risk Management',
+    'Digital Transformation', 'Organizational Design', 'Benchmarking', 'Stakeholder Management', 'Feasibility Studies',
+    // --- PRODUCT ---
+    'Product Roadmap', 'User Story Mapping', 'Agile/Scrum', 'Backlog Prioritization', 'Product Discovery',
+    'Wireframing', 'PRD Writing', 'A/B Testing', 'User Research', 'Product Analytics',
+    'MVP Development', 'Feature Specification', 'Service Design', 'Design Thinking', 'Usability Testing',
+    'Customer Journey Mapping', 'Product Lifecycle Management', 'Growth Hacking', 'SQL for Product', 'Amplitude/Mixpanel',
+    'Launch Management', 'Stakeholder Communication', 'Requirements Gathering', 'Prototyping', 'Jira/Linear',
+    // --- OPERATIONS ---
+    'Process Optimization', 'Supply Chain Management', 'Operational Excellence', 'Project Management', 'Change Management',
+    'Data Analysis', 'Cost Reduction', 'Vendor Management', 'Inventory Management', 'Quality Assurance',
+    'SOP Development', 'Resource Allocation', 'Budget Management', 'Lean Six Sigma', 'Performance Metrics (KPIs)',
+    'Logistics Planning', 'Cross-functional Collaboration', 'Risk Mitigation', 'Procurement Strategy', 'Workflow Automation',
+    'Scalability Planning', 'Incident Management', 'Compliance/Regulatory', 'Capacity Planning', 'Business Continuity',
+    // --- SHARED/SOFT SKILLS ---
+    'Data Visualization', 'Tableau/PowerBI', 'Excel/Google Sheets', 'Executive Presentation', 'Public Speaking',
+    'Negotiation', 'Leadership', 'Mentoring', 'Critical Thinking', 'Problem Solving',
+    'Conflict Resolution', 'Emotional Intelligence', 'Time Management', 'CRM (Salesforce)', 'Business Development'
+  ], []);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!skillSearch) return allSuggestedSkills.filter(s => !(profile.skills || []).includes(s)).slice(0, 12);
+    return allSuggestedSkills
+      .filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()) && !(profile.skills || []).includes(s))
+      .slice(0, 12);
+  }, [skillSearch, profile.skills, allSuggestedSkills]);
+
+  const saveProfileSection = async (sectionData: any) => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    setProfileMessage({ text: '', type: '' });
+    try {
+      const idToken = await user.getIdToken();
+      const updatedProfile = { ...profile, ...sectionData };
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(updatedProfile)
+      });
+      if (res.ok) {
+        setProfile({ ...profile, ...sectionData });
+        setProfileMessage({ text: 'Changes saved successfully!', type: 'success' });
+        setTimeout(() => setProfileMessage({ text: '', type: '' }), 3000);
+      } else {
+        throw new Error('Failed to save profile');
+      }
+    } catch (e) {
+      setProfileMessage({ text: 'Failed to save. Please try again.', type: 'error' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const saveProfile = async () => {
     if (!user) return;
@@ -1173,7 +1234,7 @@ function DashboardContent() {
                   </div>
                   <div className="md:col-span-2 flex justify-end">
                     <button
-                      onClick={saveProfile}
+                      onClick={() => saveProfileSection({ work_history: profile.work_history })}
                       disabled={isSavingProfile}
                       className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
                     >
@@ -1182,7 +1243,7 @@ function DashboardContent() {
                       ) : (
                         <Icon name="check" className="w-3.5 h-3.5" />
                       )}
-                      Save Experience
+                      Save Section
                     </button>
                   </div>
                 </div>
@@ -1279,7 +1340,7 @@ function DashboardContent() {
                   </div>
                   <div className="md:col-span-2 flex justify-end">
                     <button
-                      onClick={saveProfile}
+                      onClick={() => saveProfileSection({ education: profile.education })}
                       disabled={isSavingProfile}
                       className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
                     >
@@ -1288,7 +1349,7 @@ function DashboardContent() {
                       ) : (
                         <Icon name="check" className="w-3.5 h-3.5" />
                       )}
-                      Save Education
+                      Save Section
                     </button>
                   </div>
                 </div>
@@ -1331,18 +1392,20 @@ function DashboardContent() {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Add Skills (Select from list or type)</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Search & Add Skills (Strategy, Product, Operations)</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
-                  placeholder="e.g. JavaScript, AWS, React..."
+                  placeholder="Type to search e.g. Roadmap, Strategy, Supply Chain..."
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const val = (e.target as HTMLInputElement).value.trim();
                       if (val && !(profile.skills || []).includes(val)) {
                         setProfile({ ...profile, skills: [...(profile.skills || []), val] });
-                        (e.target as HTMLInputElement).value = '';
+                        setSkillSearch('');
                       }
                     }
                   }}
@@ -1350,13 +1413,18 @@ function DashboardContent() {
               </div>
 
               <div className="mt-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Suggested Skills</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                  {skillSearch ? `Matches for "${skillSearch}"` : 'Suggested for you'}
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'SQL', 'Git', 'Java', 'C++', 'Go', 'Swift', 'Tailwind CSS', 'Figma', 'UI/UX Design', 'Agile', 'GraphQL', 'PostgreSQL', 'MongoDB', 'Redis'].filter(s => !(profile.skills || []).includes(s)).slice(0, 12).map((skill) => (
+                  {filteredSuggestions.map((skill: string) => (
                     <button
                       key={skill}
-                      onClick={() => setProfile({ ...profile, skills: [...(profile.skills || []), skill] })}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-medium border border-slate-100 transition-all active:scale-95"
+                      onClick={() => {
+                        setProfile({ ...profile, skills: [...(profile.skills || []), skill] });
+                        setSkillSearch('');
+                      }}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 rounded-lg text-xs font-bold border border-slate-100 transition-all active:scale-95"
                     >
                       + {skill}
                     </button>
@@ -1367,7 +1435,7 @@ function DashboardContent() {
 
             <div className="flex justify-end pt-4">
               <button
-                onClick={saveProfile}
+                onClick={() => saveProfileSection({ skills: profile.skills })}
                 disabled={isSavingProfile}
                 className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
               >
@@ -1376,7 +1444,7 @@ function DashboardContent() {
                 ) : (
                   <Icon name="check" className="w-5 h-5" />
                 )}
-                Save Skills
+                Save Section
               </button>
             </div>
           </div>
