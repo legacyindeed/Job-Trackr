@@ -623,11 +623,11 @@ function DashboardContent() {
               {/* Tooltip */}
               {hoveredPoint && (
                 <div
-                  className="absolute pointer-events-none bg-slate-900 text-white p-2 rounded-lg text-[10px] shadow-xl z-20 animate-in fade-in zoom-in duration-150"
+                  className="absolute pointer-events-none bg-slate-900 text-white p-2.5 rounded-xl text-[10px] shadow-2xl z-20 animate-in fade-in zoom-in duration-150 border border-white/10"
                   style={{
                     left: `${hoveredPoint.x}%`,
                     top: `${hoveredPoint.y}%`,
-                    transform: `translate(${hoveredPoint.x > 80 ? '-100%' : hoveredPoint.x < 20 ? '0%' : '-50%'}, -120%)`
+                    transform: `translate(${hoveredPoint.x > 80 ? '-100%' : hoveredPoint.x < 20 ? '0%' : '-50%'}, ${hoveredPoint.y < 35 ? '40%' : '-130%'})`
                   }}
                 >
                   <p className="font-bold whitespace-nowrap">{hoveredPoint.label}</p>
