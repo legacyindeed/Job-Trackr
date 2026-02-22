@@ -48,26 +48,28 @@ export async function POST(request: Request) {
     try {
         const profile = await request.json();
         const {
-            full_name, email, phone, linkedin, portfolio, github,
-            resume_text, work_history, education
+            full_name, email, phone, location, linkedin, portfolio, github,
+            resume_text, work_history, education, skills
         } = profile;
 
         await sql`
             INSERT INTO user_profiles (
-                user_id, full_name, email, phone, linkedin, portfolio, github, 
-                resume_text, work_history, education, updated_at
+                user_id, full_name, email, phone, location, linkedin, portfolio, github, 
+                resume_text, work_history, education, skills, updated_at
             )
             VALUES (
                 ${userId}, 
                 ${full_name || null}, 
                 ${email || null}, 
                 ${phone || null}, 
+                ${location || null}, 
                 ${linkedin || null}, 
                 ${portfolio || null}, 
                 ${github || null}, 
                 ${resume_text || null}, 
                 ${JSON.stringify(work_history || [])}, 
                 ${JSON.stringify(education || [])}, 
+                ${JSON.stringify(skills || [])}, 
                 NOW()
             )
             ON CONFLICT (user_id) DO UPDATE
@@ -75,12 +77,14 @@ export async function POST(request: Request) {
                 full_name = EXCLUDED.full_name,
                 email = EXCLUDED.email,
                 phone = EXCLUDED.phone,
+                location = EXCLUDED.location,
                 linkedin = EXCLUDED.linkedin,
                 portfolio = EXCLUDED.portfolio,
                 github = EXCLUDED.github,
                 resume_text = EXCLUDED.resume_text,
                 work_history = EXCLUDED.work_history,
                 education = EXCLUDED.education,
+                skills = EXCLUDED.skills,
                 updated_at = NOW();
         `;
 

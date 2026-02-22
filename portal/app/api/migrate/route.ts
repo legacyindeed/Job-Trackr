@@ -25,6 +25,9 @@ export async function GET() {
             );
         `;
 
+        await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS location TEXT;`;
+        await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]';`;
+
         return NextResponse.json({ success: true, message: 'Schema updated successfully' });
     } catch (error) {
         console.error('Migration failed:', error);
