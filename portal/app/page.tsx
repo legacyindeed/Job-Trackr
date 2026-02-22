@@ -547,7 +547,7 @@ function DashboardContent() {
                 </h3>
                 <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">Application trends over time</p>
               </div>
-              <div className="flex bg-slate-100 p-1 rounded-lg">
+              <div className="flex bg-slate-100 p-1 rounded-lg relative z-30">
                 {(['7d', '30d', '12m'] as const).map(tf => (
                   <button
                     key={tf}
