@@ -3,8 +3,9 @@
 
 function syncToken() {
     const token = localStorage.getItem('firebase_id_token');
+    const email = localStorage.getItem('trackr_user_email');
     if (token) {
-        chrome.runtime.sendMessage({ action: "updateToken", token: token });
+        chrome.runtime.sendMessage({ action: "updateToken", token: token, email: email });
     }
 }
 
@@ -13,7 +14,7 @@ syncToken();
 
 // Watch for changes (login/logout)
 window.addEventListener('storage', (e) => {
-    if (e.key === 'firebase_id_token') {
+    if (e.key === 'firebase_id_token' || e.key === 'trackr_user_email') {
         syncToken();
     }
 });

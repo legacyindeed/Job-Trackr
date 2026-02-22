@@ -13,10 +13,15 @@ function renderJobs(jobs) {
 
     emptyState.style.display = 'none';
 
-    jobs.forEach((job, index) => {
+    // Sort jobs by date descending (most recent first)
+    const sortedJobs = [...jobs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sortedJobs.forEach((job) => {
         const li = document.createElement('li');
         li.className = 'job-item';
         if (!job.synced) li.classList.add('new-job'); // Blue border for unsynced
+
+        const originalIndex = jobs.indexOf(job);
 
         const dateObj = new Date(job.date);
         const dateFormatted = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -36,7 +41,7 @@ function renderJobs(jobs) {
 
         li.querySelector('.delete-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            deleteJob(index);
+            deleteJob(originalIndex);
         });
 
         list.appendChild(li);
@@ -55,23 +60,27 @@ function deleteJob(index) {
 
 // Simulating Authentication
 function checkAuth() {
-    chrome.storage.local.get(['authToken'], (result) => {
-        const token = result.authToken;
+    chrome.storage.local.get(['firebaseToken', 'firebaseEmail'], (result) => {
+        const token = result.firebaseToken;
+        const email = result.firebaseEmail;
         const indicator = document.getElementById('sync-indicator');
         const statusText = document.getElementById('sync-text');
         const loginBtn = document.getElementById('login-btn');
         const syncBtn = document.getElementById('sync-now-btn');
+        const emailDisplay = document.getElementById('user-email');
 
         if (token) {
             // Logged In
             indicator.style.backgroundColor = '#10b981'; // Green
             statusText.innerHTML = '<span class="sync-dot connected"></span> Connected';
+            if (emailDisplay) emailDisplay.textContent = email ? `(${email})` : '';
             loginBtn.style.display = 'none';
             syncBtn.style.display = 'block';
         } else {
             // Logged Out
             indicator.style.backgroundColor = '#ef4444'; // Red
             statusText.innerHTML = '<span class="sync-dot"></span> Not Connected';
+            if (emailDisplay) emailDisplay.textContent = '';
             loginBtn.style.display = 'block';
             syncBtn.style.display = 'none';
         }
@@ -80,30 +89,28 @@ function checkAuth() {
 
 async function login() {
     // Open the portal sign-up page
-    chrome.tabs.create({ url: 'http://localhost:3000/signup' });
+    chrome.tabs.create({ url: 'https://job-trackr-ten.vercel.app/signup' });
 
-    // In a real production app, we would use OAuth or a token exchange.
-    // For this local simulation, we'll assume if the user can hit the API, they are "connected" 
-    // to the local server. Authenticated endpoints would require a token we'd need to copy-paste 
-    // or share via cookies (cookies are hard in extensions without host permissions).
+    // The auth-sync.js content script will automatically capture the token 
+    // when the user logs in on the portal and send it to the background script.
 
-    // For simplicity/demo: We will just set the connection status to true if the server is up.
-    // The "Auth Token" here is just a flag for "Connected".
-    chrome.storage.sync.set({ webhookUrl: 'http://localhost:3000/api/sync' });
-    chrome.storage.local.set({ authToken: "connected_locally" }, () => {
-        setTimeout(checkAuth, 1000);
-    });
+    // For visual feedback in the popup, we'll just wait for the storage to update
+    setTimeout(checkAuth, 2000);
 }
 
 async function syncNow() {
     const btn = document.getElementById('sync-now-btn');
     btn.textContent = "Syncing...";
 
-    chrome.storage.local.get(['savedJobs'], async (result) => {
+    chrome.storage.local.get(['savedJobs', 'firebaseToken'], async (result) => {
         let jobs = result.savedJobs || [];
-        // Filter jobs that are not synced yet
-        // If we want to simple-sync all to be sure:
-        // iterate and PUSH each one.
+        const token = result.firebaseToken;
+
+        if (!token) {
+            alert("No auth token found. Please sign in to the portal.");
+            btn.textContent = "Sync Now";
+            return;
+        }
 
         let successCount = 0;
 
@@ -111,9 +118,12 @@ async function syncNow() {
             if (job.synced) continue;
 
             try {
-                const res = await fetch('http://localhost:3000/api/sync', {
+                const res = await fetch('https://job-trackr-ten.vercel.app/api/sync', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify(job)
                 });
 
@@ -150,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     document.getElementById('open-portal').addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:3000' });
+        chrome.tabs.create({ url: 'https://job-trackr-ten.vercel.app' });
     });
 
     // Local Export

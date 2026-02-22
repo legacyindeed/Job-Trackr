@@ -7,8 +7,11 @@ chrome.runtime.onInstalled.addListener(() => {
 // Listen for messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "updateToken") {
-    chrome.storage.local.set({ firebaseToken: request.token });
-    console.log("Auth token updated");
+    chrome.storage.local.set({
+      firebaseToken: request.token,
+      firebaseEmail: request.email
+    });
+    console.log("Auth token and email updated");
   }
 
   if (request.action === "syncToSheet") {

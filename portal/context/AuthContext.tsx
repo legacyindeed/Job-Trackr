@@ -29,8 +29,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (user) {
                 const idToken = await user.getIdToken();
                 localStorage.setItem('firebase_id_token', idToken);
+                localStorage.setItem('trackr_user_email', user.email || '');
             } else {
                 localStorage.removeItem('firebase_id_token');
+                localStorage.removeItem('trackr_user_email');
             }
         });
 
