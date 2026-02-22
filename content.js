@@ -438,9 +438,9 @@ function extractJobDetails() {
             '[class*="ashby-job-description"]', // Ashby fuzzy match
             '[data-testid="job-description"]', // Ashby/Generic
             '.job-description', // Generic
-            '#job-description', // Generic
-            '.description', // Generic
-            '#description', // Generic
+            '#main', // Greenhouse/Generic
+            '#content', // Greenhouse/Generic
+            '.job-body', // Generic
             '.pos-description', // Jobvite
             '.job-detail-description', // Pinpoint
             '.jd-container', // Generic
@@ -460,10 +460,16 @@ function extractJobDetails() {
 
         // Final fallback: Use meta tags if DOM selection failed
         if (!description) {
-            // Check for any element with a class containing 'description' that has significant text
-            const fuzzyDesc = Array.from(document.querySelectorAll('[class*="description"], [class*="postings-description"]'))
-                .find(el => el.innerText.trim().length > 200);
-            if (fuzzyDesc) description = fuzzyDesc.innerHTML;
+            // Check for any element with a class containing 'description' and pick the LARGEST one
+            const elements = Array.from(document.querySelectorAll('[class*="description"], [class*="postings-description"], [class*="job-details"]'));
+            const largest = elements.sort((a, b) => b.innerText.length - a.innerText.length)[1] || elements[0];
+            // Note: sometimes a parent wrapper has more text than the actual JD, but we want the JD.
+            // Actually, Greenhouse #main might be very large.
+
+            const bestMatch = elements.sort((a, b) => b.innerText.length - a.innerText.length)[0];
+            if (bestMatch && bestMatch.innerText.trim().length > 200) {
+                description = bestMatch.innerHTML;
+            }
         }
 
         if (!description) {
@@ -471,26 +477,26 @@ function extractJobDetails() {
                 document.querySelector('meta[name="description"]');
             if (metaDesc) description = metaDesc.content;
         }
+    }
 
-        // --- Post-Extraction Cleanup ---
-        // If we captured HTML, let's strip out application forms, inputs, and buttons
-        if (description && description.includes('<')) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = description;
+    // --- Post-Extraction Cleanup ---
+    // If we captured HTML, let's strip out application forms, inputs, and buttons
+    if (description && description.includes('<')) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = description;
 
-            // Remove common "junk" elements found in job postings
-            const junkSelectors = [
-                'form', '#application', '.application', 'input', 'button', 'select', 'textarea',
-                '.apply-container', '.apply-button', 'footer', 'header', 'nav',
-                'script', 'style', 'iframe', '.social-share', '.similar-jobs'
-            ];
+        // Remove common "junk" elements found in job postings
+        const junkSelectors = [
+            'form', '#application', '.application', 'input', 'button', 'select', 'textarea',
+            '.apply-container', '.apply-button', 'footer', 'header', 'nav',
+            'script', 'style', 'iframe', '.social-share', '.similar-jobs'
+        ];
 
-            junkSelectors.forEach(s => {
-                tempDiv.querySelectorAll(s).forEach(junk => junk.remove());
-            });
+        junkSelectors.forEach(s => {
+            tempDiv.querySelectorAll(s).forEach(junk => junk.remove());
+        });
 
-            description = tempDiv.innerHTML.trim();
-        }
+        description = tempDiv.innerHTML.trim();
     }
 
     return { title, location, salary, jobType, description };
