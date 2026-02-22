@@ -35,7 +35,7 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
-  width: 360px !important;
+  width: 380px !important;
   transform: translateY(0) !important;
   opacity: 1 !important;
   animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -68,7 +68,8 @@
   color: #64748b !important;
   line-height: 1.5 !important;
   display: -webkit-box !important;
-  -webkit-line-clamp: 2 !important;
+  -webkit-line-clamp: 3 !important;
+  line-clamp: 3 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
   white-space: normal !important;

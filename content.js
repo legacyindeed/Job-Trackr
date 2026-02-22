@@ -69,7 +69,7 @@ function injectTrackerOverlay() {
 
     // Extract rudimentary details
     const pageTitle = document.title || 'Unknown Job';
-    const displayTitle = pageTitle.length > 50 ? pageTitle.substring(0, 50) + '...' : pageTitle;
+    const displayTitle = pageTitle;
 
     overlay.innerHTML = `
     <button class="close-btn">&times;</button>
