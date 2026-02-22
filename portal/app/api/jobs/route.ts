@@ -38,6 +38,7 @@ export async function GET(request: Request) {
                 url, 
                 status, 
                 job_type as "jobType", 
+                description,
                 created_at as "date", 
                 updated_at as "updatedAt"
             FROM jobs 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
     try {
         const job = await request.json();
 
-        let { title, company, location, salary, url, status = 'Applied', jobType } = job;
+        let { title, company, location, salary, url, status = 'Applied', jobType, description } = job;
 
         if (!title || !company) {
             return NextResponse.json({ error: 'Title and Company are required' }, { status: 400 });
@@ -77,8 +78,8 @@ export async function POST(request: Request) {
         }
 
         await sql`
-            INSERT INTO jobs (title, company, location, salary, url, status, job_type, user_id, updated_at)
-            VALUES (${title}, ${company}, ${location}, ${salary}, ${url}, ${status}, ${jobType}, ${userId}, NOW())
+            INSERT INTO jobs (title, company, location, salary, url, status, job_type, description, user_id, updated_at)
+            VALUES (${title}, ${company}, ${location}, ${salary}, ${url}, ${status}, ${jobType}, ${description}, ${userId}, NOW())
             ON CONFLICT (url) DO UPDATE
             SET 
                 title = EXCLUDED.title,
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
                 salary = EXCLUDED.salary,
                 status = EXCLUDED.status,
                 job_type = EXCLUDED.job_type,
+                description = EXCLUDED.description,
                 updated_at = NOW();
         `;
 

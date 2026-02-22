@@ -186,6 +186,7 @@ function extractJobDetails() {
     let salary = 'N/A';
     let title = null;
     let jobType = 'N/A';
+    let description = '';
 
     // Helper text cleaner
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
@@ -240,8 +241,13 @@ function extractJobDetails() {
                     jobType = jobType.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                 }
 
+                // Description
+                if (jobPosting.description) {
+                    description = jobPosting.description;
+                }
+
                 // If found everything, return early
-                if (title && location !== 'N/A' && salary !== 'N/A' && jobType !== 'N/A') return { title, location, salary, jobType };
+                if (title && location !== 'N/A' && salary !== 'N/A' && jobType !== 'N/A' && description) return { title, location, salary, jobType, description };
             }
         } catch (e) {
             // ignore parse errors
@@ -417,7 +423,43 @@ function extractJobDetails() {
         }
     }
 
-    return { title, location, salary, jobType };
+    // --- Description Scraper Logic ---
+    if (!description) {
+        const descSelectors = [
+            '#jobDescriptionText', // Indeed
+            '.show-more-less-html__markup', // LinkedIn
+            '.jobs-description__container', // LinkedIn
+            '[data-automation-id="jobPostingDescription"]', // Workday
+            '.job-description', // Generic
+            '#job-description', // Generic
+            '.description', // Generic
+            '#description', // Generic
+            '.pos-description', // Jobvite
+            '.job-detail-description', // Pinpoint
+            '.jd-container', // Generic
+            'article', // Semantic fallback
+            'main' // Last resort
+        ];
+
+        for (const selector of descSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                // If it's a huge element like 'main', ensure it doesn't contain the whole page
+                // But for most specific selectors, we want the HTML or clean text
+                description = el.innerHTML;
+                break;
+            }
+        }
+
+        // Final fallback: Use meta tags if DOM selection failed
+        if (!description) {
+            const metaDesc = document.querySelector('meta[property="og:description"]') ||
+                document.querySelector('meta[name="description"]');
+            if (metaDesc) description = metaDesc.content;
+        }
+    }
+
+    return { title, location, salary, jobType, description };
 }
 
 function parseCompany(hostname, pathname) {

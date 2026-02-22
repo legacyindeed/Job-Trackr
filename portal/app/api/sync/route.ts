@@ -48,6 +48,7 @@ export async function POST(request: Request) {
             url,
             status = 'Applied',
             jobType,
+            description,
         } = job;
 
         if (!url) {
@@ -56,12 +57,14 @@ export async function POST(request: Request) {
 
         // Upsert logic (Insert or Update on conflict)
         await sql`
-      INSERT INTO jobs (title, company, location, salary, url, status, job_type, user_id, updated_at)
-      VALUES (${title}, ${company}, ${location}, ${salary}, ${url}, ${status}, ${jobType}, ${userId}, NOW())
+      INSERT INTO jobs (title, company, location, salary, url, status, job_type, description, user_id, updated_at)
+      VALUES (${title}, ${company}, ${location}, ${salary}, ${url}, ${status}, ${jobType}, ${description}, ${userId}, NOW())
       ON CONFLICT (url) DO UPDATE
       SET 
         title = EXCLUDED.title,
         status = EXCLUDED.status, 
+        job_type = EXCLUDED.job_type,
+        description = EXCLUDED.description,
         user_id = EXCLUDED.user_id,
         updated_at = NOW();
     `;

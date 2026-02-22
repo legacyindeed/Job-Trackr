@@ -24,6 +24,8 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
     case 'eye': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
     case 'eye-slash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
     case 'plus': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+    case 'book': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>;
+    case 'pipeline': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3zM8 12h8M12 8v8"></path></svg>;
     default: return null;
   }
 };
@@ -92,11 +94,12 @@ function DashboardContent() {
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '', url: '' });
+  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '', url: '', description: '' });
 
   // Add State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '' });
+  const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '', description: '' });
+  const [viewingDescription, setViewingDescription] = useState<string | null>(null);
 
   const handleAddSubmit = async () => {
     if (!user) return;
@@ -112,7 +115,7 @@ function DashboardContent() {
       });
       if (res.ok) {
         setIsAddModalOpen(false);
-        setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '' });
+        setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '', description: '' });
         fetchJobs();
       }
     } catch (e) {
@@ -406,7 +409,8 @@ function DashboardContent() {
       salary: job.salary || '',
       location: job.location || '',
       notes: job.notes || '',
-      url: job.url || ''
+      url: job.url || '',
+      description: job.description || ''
     });
     setIsEditModalOpen(true);
   };
@@ -779,6 +783,15 @@ function DashboardContent() {
                     >
                       <Icon name="edit" className="w-4 h-4" />
                     </button>
+                    {job.description && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description); }}
+                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                        title="View Job Description"
+                      >
+                        <Icon name="book" className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
@@ -841,7 +854,17 @@ function DashboardContent() {
                         <Icon name="trash" className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-sm text-slate-500 mb-3 font-medium">{job.company}</p>
+                    <p className="text-sm text-slate-500 mb-2 font-medium">{job.company}</p>
+
+                    {job.description && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description); }}
+                        className="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-purple-600 transition-colors uppercase tracking-tight"
+                      >
+                        <Icon name="book" className="w-3 h-3" />
+                        View Description
+                      </button>
+                    )}
 
                     <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
                       <span className="flex items-center gap-1">
@@ -1086,6 +1109,16 @@ function DashboardContent() {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Description</label>
+                  <textarea
+                    placeholder="Paste the full job description here..."
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
+                    value={addForm.description}
+                    onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
@@ -1192,13 +1225,21 @@ function DashboardContent() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
                   <textarea
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
                     value={editForm.notes}
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Description</label>
+                  <textarea
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   />
                 </div>
               </div>
@@ -1311,6 +1352,50 @@ function DashboardContent() {
         )
       }
       {renderMobileNav()}
+
+      {/* View Description Modal */}
+      {
+        viewingDescription && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden animate-in fade-in zoom-in slide-in-from-bottom-8 duration-300">
+              <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                  <h3 className="font-bold text-xl text-slate-800">Job Description</h3>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-0.5">Role requirements & details</p>
+                </div>
+                <button
+                  onClick={() => setViewingDescription(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                >
+                  <Icon name="x" className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto max-h-[calc(85vh-80px)] scrollbar-thin scrollbar-thumb-slate-200">
+                <div
+                  className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-sm selection:bg-blue-100"
+                  dangerouslySetInnerHTML={{ __html: viewingDescription }}
+                />
+                {(!viewingDescription || viewingDescription.trim() === '') && (
+                  <div className="py-20 text-center">
+                    <Icon name="book" className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-medium">No description content available.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
+                <button
+                  onClick={() => setViewingDescription(null)}
+                  className="px-8 py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200"
+                >
+                  Close Reader
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Mobile Floating Add Button */}
       {
