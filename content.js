@@ -306,6 +306,26 @@ function extractJobDetails() {
         if (sgLoc) location = clean(sgLoc.textContent);
     }
 
+    // 1.4. Specific iCIMS Logic
+    if (window.location.hostname.includes('icims.com')) {
+        const icimsTitle = document.querySelector('.iCIMS_JobHeader .iCIMS_Header h1') ||
+            document.querySelector('.iCIMS_JobHeader h1') ||
+            document.querySelector('.iCIMS_Header h1');
+        if (icimsTitle) title = clean(icimsTitle.textContent);
+
+        const icimsLoc = document.querySelector('.iCIMS_JobHeader .iCIMS_JobHeaderGroup dl') ||
+            document.querySelector('.iCIMS_JobHeaderTag');
+        if (icimsLoc) {
+            // Usually looks like \"Location | US-NY-New York\"
+            const locText = clean(icimsLoc.textContent);
+            if (locText.includes('|')) {
+                location = clean(locText.split('|')[1]);
+            } else {
+                location = locText;
+            }
+        }
+    }
+
 
     // 1.5. Specific Jobvite Logic (since it often fails generic checks)
     if (window.location.hostname.includes('jobvite.com')) {
@@ -488,6 +508,8 @@ function extractJobDetails() {
             '[id*="requisitionDescription"]', // Taleo
             '[id*="jobDescription"]', // Taleo
             '.editablesection', // Taleo
+            '.iCIMS_JobDescription', // iCIMS
+            '.iCIMS_JobContent', // iCIMS
             '.ashby-job-description', // Ashby
             '.ashby-job-description-content', // Ashby
             '[class*="ashby-job-description"]', // Ashby fuzzy match
@@ -637,6 +659,13 @@ function parseCompany(hostname, pathname) {
             const pathParts = pathname.split('/').filter(p => p);
             if (pathParts.length > 0) return capitalizeFirstLetter(pathParts[0]);
         }
+    }
+
+    // iCIMS (Company often in subdomain: careers-companyname.icims.com)
+    if (hostname.includes('icims.com')) {
+        const sub = parts[0];
+        if (sub.startsWith('careers-')) return capitalizeFirstLetter(sub.replace('careers-', ''));
+        return capitalizeFirstLetter(sub);
     }
 
     // Pinpoint HQ
