@@ -582,12 +582,13 @@ function DashboardContent() {
                   className="transition-all duration-700 ease-in-out"
                 />
 
-                {/* The Line - Hairline Thin */}
+                {/* The Line - Uniform & Slim */}
                 <path
                   d={getSmoothPath(chartData)}
                   fill="none"
-                  stroke="#1e293b"
-                  strokeWidth="0.5"
+                  stroke="#0f172a"
+                  strokeWidth="0.65"
+                  vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="transition-all duration-700 ease-in-out"
@@ -608,9 +609,9 @@ function DashboardContent() {
                     onMouseEnter={() => setHoveredPoint({ ...d, x, y })}
                     onMouseLeave={() => setHoveredPoint(null)}
                   >
-                    {/* The Dot */}
+                    {/* The Dot - Solid Black */}
                     <div
-                      className={`rounded-full bg-white border border-slate-900 transition-all duration-300 ${isHovered ? 'w-2 h-2' : 'w-1 h-1'} shadow-sm`}
+                      className={`rounded-full bg-slate-900 transition-all duration-300 ${isHovered ? 'w-2 h-2' : 'w-1 h-1'}`}
                     />
 
                     {/* Interaction Bridge (Invisible tall area) */}
