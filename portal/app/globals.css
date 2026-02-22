@@ -32,3 +32,62 @@ body {
 .heading-font {
   font-family: var(--font-outfit), sans-serif;
 }
+
+@utility reader-content {
+  color: #334155;
+  line-height: 1.7;
+}
+
+.reader-content h1,
+.reader-content h2,
+.reader-content h3 {
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+}
+
+.reader-content h1 {
+  font-size: 1.5rem;
+}
+
+.reader-content h2 {
+  font-size: 1.25rem;
+}
+
+.reader-content h3 {
+  font-size: 1.1rem;
+}
+
+.reader-content p {
+  margin-bottom: 1.25rem;
+}
+
+.reader-content ul,
+.reader-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1.25rem;
+  list-style-type: disc;
+}
+
+.reader-content ol {
+  list-style-type: decimal;
+}
+
+.reader-content li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.reader-content strong,
+.reader-content b {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.reader-content br {
+  display: block;
+  content: "";
+  margin-top: 0.75rem;
+}

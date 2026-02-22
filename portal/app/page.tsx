@@ -1369,7 +1369,7 @@ function DashboardContent() {
 
               <div className="p-8 overflow-y-auto max-h-[calc(85vh-80px)] scrollbar-thin scrollbar-thumb-slate-200">
                 <div
-                  className="prose prose-slate max-w-none text-slate-600 leading-relaxed text-sm selection:bg-blue-100"
+                  className="reader-content max-w-none text-slate-600 leading-relaxed text-sm selection:bg-blue-100"
                   dangerouslySetInnerHTML={{ __html: viewingDescription }}
                 />
                 {(!viewingDescription || viewingDescription.trim() === '') && (

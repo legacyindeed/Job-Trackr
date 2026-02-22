@@ -287,6 +287,14 @@ function extractJobDetails() {
         if (sgLoc) location = clean(sgLoc.textContent);
     }
 
+    // 1.4. Specific Workday Logic
+    if (window.location.hostname.includes('myworkdayjobs.com')) {
+        const wdTitle = document.querySelector('[data-automation-id="jobPostingHeader"]') ||
+            document.querySelector('h2') ||
+            document.querySelector('.GCW0012D-TITLE');
+        if (wdTitle) title = clean(wdTitle.textContent);
+    }
+
     // 1.5. Specific Jobvite Logic (since it often fails generic checks)
     if (window.location.hostname.includes('jobvite.com')) {
         const jvTitle = document.querySelector('.jv-header') || document.querySelector('.jv-job-detail-header h2');
