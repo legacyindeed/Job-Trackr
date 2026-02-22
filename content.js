@@ -74,7 +74,7 @@ function injectTrackerOverlay() {
     overlay.innerHTML = `
     <button class="close-btn">&times;</button>
     <h3><span style="font-size: 1.2em;">💼</span> Job Application Detected</h3>
-    <p title="${pageTitle}"><strong>${displayTitle}</strong></p>
+    <p title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
       <button class="btn-ignore">Not Now</button>
       <button class="btn-track">Yes, Track This</button>
@@ -167,7 +167,7 @@ function injectTrackerOverlay() {
             chrome.storage.local.set({ savedJobs: jobs }, () => {
                 trackBtn.textContent = 'Saved!';
                 trackBtn.disabled = true;
-                trackBtn.style.backgroundColor = '#27ae60'; // Keep green
+                trackBtn.style.backgroundColor = '#2563eb';
                 setTimeout(() => overlay.remove(), 2000);
 
                 // Sync to Google Sheet if configured
