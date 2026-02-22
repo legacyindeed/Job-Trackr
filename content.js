@@ -76,8 +76,8 @@ function injectTrackerOverlay() {
     <h3><span style="font-size: 1.2em;">💼</span> Job Application Detected</h3>
     <p title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
-      <button class="btn-ignore">Not Now</button>
-      <button class="btn-track">Yes, Apply This</button>
+      <button class="btn-ignore">Did Not Apply</button>
+      <button class="btn-track">Yes, I Applied</button>
     </div>
   `;
 
@@ -137,7 +137,7 @@ function injectTrackerOverlay() {
 
             // 1. Check for URL duplicate (Exact Match)
             if (jobs.some(j => j.url === jobData.url)) {
-                trackBtn.textContent = 'Already Saved';
+                trackBtn.textContent = 'Already Applied';
                 setTimeout(() => overlay.remove(), 2000);
                 return;
             }
@@ -165,7 +165,7 @@ function injectTrackerOverlay() {
             // Save if unique or confirmed
             jobs.push(jobData);
             chrome.storage.local.set({ savedJobs: jobs }, () => {
-                trackBtn.textContent = 'Saved!';
+                trackBtn.textContent = 'Applied!';
                 trackBtn.disabled = true;
                 trackBtn.style.backgroundColor = '#2563eb';
                 setTimeout(() => overlay.remove(), 2000);
