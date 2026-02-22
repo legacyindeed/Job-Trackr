@@ -44,7 +44,8 @@ function isJobPage() {
         'lifeattiktok.com',
         'workforcenow.adp.com',
         'adp.com',
-        'pinpointhq.com'
+        'pinpointhq.com',
+        'rippling.com'
     ];
 
     const keywords = ['/job/', '/jobs/', '/career/', '/careers/', '/apply', '/vacancy/', '/position/', '/posting/'];
@@ -322,6 +323,41 @@ function extractJobDetails() {
         if (pinType) jobType = clean(pinType.textContent);
     }
 
+    // 2.6. Rippling Logic
+    if (window.location.hostname.includes('rippling.com')) {
+        try {
+            const nextData = document.getElementById('__NEXT_DATA__');
+            if (nextData) {
+                const data = JSON.parse(nextData.textContent);
+                const apiData = data?.props?.pageProps?.apiData || data?.props?.apiData;
+                const jobPost = apiData?.jobPost;
+                const jobBoard = apiData?.jobBoard;
+
+                if (jobPost) {
+                    if (jobPost.jobPostName) title = clean(jobPost.jobPostName);
+                    if (jobPost.workLocations && jobPost.workLocations.length > 0) {
+                        location = clean(jobPost.workLocations[0].name || jobPost.workLocations[0].city);
+                    }
+                    if (jobPost.employmentType) {
+                        jobType = clean(jobPost.employmentType);
+                    }
+                }
+
+                if (jobBoard && jobBoard.slug) {
+                    company = capitalizeFirstLetter(jobBoard.slug);
+                }
+            }
+        } catch (e) {
+            console.log("Rippling __NEXT_DATA__ parse failed", e);
+        }
+
+        // Fallback selectors
+        if (!title) {
+            const ripTitle = document.querySelector('h1') || document.querySelector('[data-testid="job-post-name"]');
+            if (ripTitle) title = clean(ripTitle.textContent);
+        }
+    }
+
     // 2. Heuristic Search
     const bodyText = document.body.innerText;
 
@@ -450,6 +486,13 @@ function parseCompany(hostname, pathname) {
     if (hostname.includes('pinpointhq.com')) {
         // e.g. icario.pinpointhq.com
         return capitalizeFirstLetter(hostname.split('.')[0]);
+    }
+
+    // Rippling
+    if (hostname.includes('rippling.com')) {
+        // e.g. ats.rippling.com/mykaarma/jobs/...
+        const pathParts = pathname.split('/').filter(p => p);
+        if (pathParts.length > 0) return capitalizeFirstLetter(pathParts[0]);
     }
 
     // Standard heuristic
