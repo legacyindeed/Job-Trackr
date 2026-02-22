@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { getFirebaseAuth } from '../lib/firebase';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Sidekick, SidekickSelector, PersonalityType } from '../components/Sidekick';
 
 // Icons as a component
 const Icon = ({ name, className }: { name: string; className?: string }) => {
@@ -69,59 +68,6 @@ function DashboardContent() {
   const [dailyTips, setDailyTips] = useState<string[]>([]);
   const [isAnonymized, setIsAnonymized] = useState(false);
 
-  // Sidekick State
-  const [personality, setPersonality] = useState<PersonalityType | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('trackr_personality') as PersonalityType;
-    }
-    return null;
-  });
-  const [sidekickEvent, setSidekickEvent] = useState<string | null>(null);
-  const [aiMessage, setAiMessage] = useState<string>("");
-  const [aiHeader, setAiHeader] = useState<string>("Intel Brief");
-  const [isAiThinking, setIsAiThinking] = useState(false);
-
-  const fetchSidekickMessage = async (event: string, context?: any) => {
-    if (!personality) return;
-    setIsAiThinking(true);
-    try {
-      const res = await fetch('/api/sidekick', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personality, event, context })
-      });
-      const data = await res.json();
-      setAiMessage(data.text);
-      if (data.header) setAiHeader(data.header);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsAiThinking(false);
-    }
-  };
-
-  useEffect(() => {
-    if (sidekickEvent) {
-      const context = sidekickEvent === 'add_job' ? addForm : undefined;
-      fetchSidekickMessage(sidekickEvent, context);
-      const timer = setTimeout(() => setSidekickEvent(null), 12000);
-      return () => clearTimeout(timer);
-    }
-  }, [sidekickEvent]);
-
-  // Refresh AI Intelligence on Dashboard mount
-  useEffect(() => {
-    if (personality && activeTab === 'dashboard') {
-      fetchSidekickMessage('refresh');
-    }
-  }, [personality, activeTab]);
-
-  const handleSelectPersonality = (p: PersonalityType) => {
-    setPersonality(p);
-    localStorage.setItem('trackr_personality', p);
-    setSidekickEvent('welcome');
-  };
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -166,7 +112,6 @@ function DashboardContent() {
         setIsAddModalOpen(false);
         setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '' });
         fetchJobs();
-        setSidekickEvent('add_job');
       }
     } catch (e) {
       console.error(e);
@@ -246,14 +191,13 @@ function DashboardContent() {
 
   useEffect(() => {
     const rotateQuote = () => {
-      fetchSidekickMessage('daily_mission');
+      setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
     };
 
     // Initial set
     rotateQuote();
 
-    // Rotate every 45 seconds (slow delay)
-    const interval = setInterval(rotateQuote, 45000);
+    const interval = setInterval(rotateQuote, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -288,6 +232,23 @@ function DashboardContent() {
   const today = new Date().toLocaleDateString();
   const todayJobs = jobs.filter(j => new Date(j.date).toLocaleDateString() === today).length;
   const goalProgress = Math.min(100, (todayJobs / dailyGoal) * 100);
+
+  // Velocity Calculation (Last 7 days vs previous 7 days)
+  const now = new Date();
+  const sevenDayCount = jobs.filter(j => {
+    const d = new Date(j.date);
+    return (now.getTime() - d.getTime()) <= (7 * 24 * 60 * 60 * 1000);
+  }).length;
+
+  const prevSevenDayCount = jobs.filter(j => {
+    const d = new Date(j.date);
+    const diff = now.getTime() - d.getTime();
+    return diff > (7 * 24 * 60 * 60 * 1000) && diff <= (14 * 24 * 60 * 60 * 1000);
+  }).length;
+
+  const velocityTrend = prevSevenDayCount > 0
+    ? Math.round(((sevenDayCount - prevSevenDayCount) / prevSevenDayCount) * 100)
+    : (sevenDayCount > 0 ? 100 : 0);
 
   const handleGoalChange = (newGoal: number) => {
     setDailyGoal(newGoal);
@@ -423,7 +384,7 @@ function DashboardContent() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <button
           onClick={() => handleTabChange('applications')}
           className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-left hover:border-blue-300 hover:shadow-md transition-all group"
@@ -432,6 +393,18 @@ function DashboardContent() {
           <div className="text-3xl font-bold text-slate-800">{appliedCount}</div>
           <div className="mt-2 text-xs text-green-600 font-medium">+ Updated just now</div>
         </button>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-slate-500 text-sm font-medium">Weekly Velocity</div>
+            {velocityTrend !== 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${velocityTrend > 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                {velocityTrend > 0 ? '↑' : '↓'} {Math.abs(velocityTrend)}%
+              </span>
+            )}
+          </div>
+          <div className="text-3xl font-bold text-slate-800">{sevenDayCount}</div>
+          <div className="mt-2 text-xs text-slate-400 font-medium">Applied (Past 7d)</div>
+        </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-blue-50 to-white">
           <div className="text-blue-600 text-sm font-medium mb-1">Interviewing</div>
           <div className="text-3xl font-bold text-blue-900">{statusCounts['Interviewing'] || 0}</div>
@@ -823,50 +796,6 @@ function DashboardContent() {
           {activeTab === 'applications' && renderApplications()}
           {activeTab === 'pipeline' && renderPipeline()}
         </div>
-
-        {activeTab === 'dashboard' && personality && (
-          <div className="hidden sm:block fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[640px] px-3 sm:px-4 pointer-events-none">
-            <div className="bg-white/95 backdrop-blur-xl border border-slate-200/40 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-2xl sm:rounded-full py-3 px-4 sm:py-3.5 sm:px-6 flex items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pointer-events-auto group hover:shadow-[0_12px_50px_rgba(0,0,0,0.15)] transition-all">
-
-              {/* Profile Bubble (Left) */}
-              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex-shrink-0 flex items-center justify-center text-xl sm:text-2xl shadow-md border border-white/50 relative overflow-hidden ${personality === 'serge' ? 'bg-emerald-500' : personality === 'jax' ? 'bg-indigo-500' : 'bg-teal-500'
-                }`}>
-                <span className="relative z-10 transition-transform group-hover:scale-110 duration-300">
-                  {personality === 'serge' && '🎖️'}{personality === 'jax' && '🎸'}{personality === 'luna' && '🌙'}
-                </span>
-              </div>
-
-              {/* Content Area (Right) */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 leading-none mb-0.5 sm:mb-1">
-                  <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-colors ${isAiThinking ? 'text-blue-500 animate-pulse' : 'text-slate-400'}`}>
-                    {isAiThinking ? 'Analyzing' : aiHeader}
-                  </span>
-                  <div className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-slate-200"></div>
-                  <span className="text-[8px] sm:text-[10px] font-bold text-slate-300 uppercase italic">{personality}</span>
-                </div>
-
-                <div className="relative">
-                  <p className="text-[15px] sm:text-[21px] font-normal text-slate-700 leading-snug line-clamp-2 group-hover:line-clamp-none transition-all duration-300 italic pr-3" style={{ fontFamily: 'var(--font-playfair), serif' }}>
-                    "{aiMessage || "Connecting..."}"
-                  </p>
-
-                  {isAiThinking && (
-                    <div className="absolute inset-0 bg-white/60 flex items-center gap-1 sm:gap-1.5">
-                      <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!personality && (
-          <SidekickSelector onSelect={handleSelectPersonality} />
-        )}
       </main>
 
       {/* Add Modal */}
