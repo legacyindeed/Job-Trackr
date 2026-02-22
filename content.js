@@ -130,6 +130,7 @@ function injectTrackerOverlay() {
             location: details.location,
             salary: details.salary,
             jobType: details.jobType,
+            description: details.description || '',
             date: new Date().toISOString(),
             status: 'Applied' // Default status
         };
@@ -432,6 +433,7 @@ function extractJobDetails() {
             '[data-automation-id="jobPostingDescription"]', // Workday
             '.ashby-job-description', // Ashby
             '.ashby-job-description-content', // Ashby
+            '[class*="ashby-job-description"]', // Ashby fuzzy match
             '[data-testid="job-description"]', // Ashby/Generic
             '.job-description', // Generic
             '#job-description', // Generic
@@ -455,6 +457,13 @@ function extractJobDetails() {
         }
 
         // Final fallback: Use meta tags if DOM selection failed
+        if (!description) {
+            // Check for any element with a class containing 'description' that has significant text
+            const fuzzyDesc = Array.from(document.querySelectorAll('[class*="description"], [class*="postings-description"]'))
+                .find(el => el.innerText.trim().length > 200);
+            if (fuzzyDesc) description = fuzzyDesc.innerHTML;
+        }
+
         if (!description) {
             const metaDesc = document.querySelector('meta[property="og:description"]') ||
                 document.querySelector('meta[name="description"]');
