@@ -339,6 +339,7 @@ function extractJobDetails() {
     let location = 'N/A', salary = 'N/A', title = null, jobType = 'N/A', description = '';
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
 
+    // 1. Title Extraction
     const titleSelectors = ['h1', '.app-title', '.job-title', '.header-container h1', 'title'];
     for (const s of titleSelectors) {
         const el = s === 'title' ? document.title : document.querySelector(s)?.textContent;
@@ -349,25 +350,62 @@ function extractJobDetails() {
         }
     }
 
+    // 2. Comprehensive Description Extraction
     const descSelectors = [
-        '#jobDescriptionText',
-        '.show-more-less-html__markup',
-        '.jobs-description__container',
-        '[data-automation-id="jobPostingDescription"]',
-        '#content',
+        '#jobDescriptionText', // Indeed
+        '.show-more-less-html__markup', // LinkedIn
+        '.jobs-description__container', // LinkedIn
+        '[data-automation-id="jobPostingDescription"]', // Workday
+        '#content', // Greenhouse
+        '#description', // Lever/Generic
         '.job-description',
-        '#description',
         '.description',
         'article',
-        '.main-content'
+        '.main-content',
+        'main'
     ];
+
+    let candidates = [];
     for (const selector of descSelectors) {
         const el = document.querySelector(selector);
-        if (el && el.innerText.trim().length > 50) {
-            description = el.innerHTML;
-            break;
+        if (el && el.innerText.trim().length > 100) {
+            candidates.push({ html: el.innerHTML, text: el.innerText.trim(), length: el.innerText.length });
         }
     }
+
+    // Pick the one with the most content (likely the full JD)
+    if (candidates.length > 0) {
+        candidates.sort((a, b) => b.length - a.length);
+        description = candidates[0].html;
+
+        // --- Salary Extraction ---
+        // Look for common salary patterns in the text
+        const bodyText = candidates[0].text;
+        const salaryRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?(?:\s*\/|\s+per\s+)(?:yr|year|hr|hour|annually)?/i;
+        const simpleRangeRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?/i;
+
+        const match = bodyText.match(salaryRegex) || bodyText.match(simpleRangeRegex);
+        if (match) {
+            salary = match[0];
+        } else {
+            // Check for "salary range" keywords
+            const payReg = /(?:salary|pay|compensation|range)\s*[:\-]?\s*([\$\d,\s\-k]{5,40})/i;
+            const payMatch = bodyText.match(payReg);
+            if (payMatch && payMatch[1] && payMatch[1].includes('$')) {
+                salary = payMatch[1].trim();
+            }
+        }
+    }
+
+    // 3. Location & Type (Heuristic Fallbacks)
+    if (location === 'N/A') {
+        const fullText = document.body.innerText;
+        if (fullText.match(/remote/i)) location = 'Remote';
+        // Try meta tags
+        const metaLoc = document.querySelector('meta[name*="location"], meta[property*="location"]');
+        if (metaLoc) location = metaLoc.content;
+    }
+
     return { title, location, salary, jobType, description };
 }
 
