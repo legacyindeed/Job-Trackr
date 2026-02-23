@@ -269,12 +269,19 @@ async function autofillForm(profile) {
 
     for (const input of allInputs) {
         if (['hidden', 'submit', 'button', 'search', 'checkbox', 'radio'].includes(input.type)) continue;
-        if (input.value && input.value.trim().length > 0 && input.tagName !== 'SELECT') continue;
+
+        // Don't skip if it has a placeholder-like value or common dummy text
+        if (input.value && input.value.trim().length > 1 && input.tagName !== 'SELECT') {
+            const val = input.value.toLowerCase();
+            if (!val.includes('e.g.') && !val.includes('example') && val.length > 3) continue;
+        }
 
         const name = (input.name || '').toLowerCase();
         const id = (input.id || '').toLowerCase();
         const placeholder = (input.placeholder || '').toLowerCase();
         const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+        const dataQa = (input.getAttribute('data-qa') || '').toLowerCase();
+        const dataQaValue = (input.getAttribute('data-qa-value') || '').toLowerCase();
 
         let labelTextRaw = '';
         if (input.id) {
@@ -285,12 +292,14 @@ async function autofillForm(profile) {
             const parentLabel = input.closest('label');
             if (parentLabel) labelTextRaw = parentLabel.innerText;
         }
-        const labelText = (labelTextRaw || '').toLowerCase();
+
+        // Merge all context for matching
+        const context = (name + ' ' + id + ' ' + placeholder + ' ' + ariaLabel + ' ' + dataQa + ' ' + dataQaValue + ' ' + (labelTextRaw || '')).toLowerCase();
 
         let matched = false;
         for (const [key, keywords] of Object.entries(personalMappings)) {
             const val = dataSource[key];
-            if (val && keywords.some(kw => name.includes(kw) || id.includes(kw) || placeholder.includes(kw) || ariaLabel.includes(kw) || labelText.includes(kw))) {
+            if (val && keywords.some(kw => context.includes(kw))) {
                 await setVal(input, val);
                 fillCount++;
                 matched = true;
@@ -301,7 +310,7 @@ async function autofillForm(profile) {
         if (!matched && profile.custom_responses) {
             const cleanLabel = (labelTextRaw || '').replace(/\*/g, '').toLowerCase().trim();
             for (const [learntQ, learntA] of Object.entries(profile.custom_responses)) {
-                if (cleanLabel.includes(learntQ) || learntQ.includes(cleanLabel)) {
+                if (cleanLabel.includes(learntQ) || learntQ.includes(cleanLabel) || context.includes(learntQ)) {
                     await setVal(input, learntA);
                     fillCount++;
                     break;

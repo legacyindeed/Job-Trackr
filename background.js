@@ -147,11 +147,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "broadcastAutofill") {
-    // Send the profile data to all frames in the sender's tab
     const tabId = sender.tab.id;
-    chrome.tabs.sendMessage(tabId, {
-      action: "executeAutofill",
-      profile: request.profile
+    // Use webNavigation to find ALL frame IDs in this tab
+    chrome.webNavigation.getAllFrames({ tabId: tabId }, (frames) => {
+      if (frames) {
+        frames.forEach(frame => {
+          chrome.tabs.sendMessage(tabId, {
+            action: "executeAutofill",
+            profile: request.profile
+          }, { frameId: frame.frameId });
+        });
+      }
     });
     return true;
   }
