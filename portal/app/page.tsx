@@ -152,6 +152,9 @@ function DashboardContent() {
     'MVP Development', 'Feature Specification', 'Service Design', 'Design Thinking', 'Usability Testing',
     'Customer Journey Mapping', 'Product Lifecycle Management', 'Growth Hacking', 'SQL for Product', 'Amplitude/Mixpanel',
     'Launch Management', 'Stakeholder Communication', 'Requirements Gathering', 'Prototyping', 'Jira/Linear',
+    // --- DATA & ANALYTICS ---
+    'Python Programming', 'Tableau', 'SQL (PostgreSQL/BigQuery)', 'R Programming', 'Data Modeling',
+    'Business Intelligence (BI)', 'Data Warehouse (Snowflake)', 'Predictive Modeling', 'Machine Learning Basics', 'Statistical Analysis',
     // --- OPERATIONS ---
     'Process Optimization', 'Supply Chain Management', 'Operational Excellence', 'Project Management', 'Change Management',
     'Data Analysis', 'Cost Reduction', 'Vendor Management', 'Inventory Management', 'Quality Assurance',
@@ -159,7 +162,7 @@ function DashboardContent() {
     'Logistics Planning', 'Cross-functional Collaboration', 'Risk Mitigation', 'Procurement Strategy', 'Workflow Automation',
     'Scalability Planning', 'Incident Management', 'Compliance/Regulatory', 'Capacity Planning', 'Business Continuity',
     // --- SHARED/SOFT SKILLS ---
-    'Data Visualization', 'Tableau/PowerBI', 'Excel/Google Sheets', 'Executive Presentation', 'Public Speaking',
+    'Data Visualization', 'PowerBI', 'Excel/Google Sheets', 'Executive Presentation', 'Public Speaking',
     'Negotiation', 'Leadership', 'Mentoring', 'Critical Thinking', 'Problem Solving',
     'Conflict Resolution', 'Emotional Intelligence', 'Time Management', 'CRM (Salesforce)', 'Business Development'
   ], []);
@@ -1095,6 +1098,25 @@ function DashboardContent() {
               />
             </div>
           </div>
+          <div className="flex justify-end mt-8 border-t border-slate-50 pt-6">
+            <button
+              onClick={() => saveProfileSection({
+                full_name: profile.full_name,
+                email: profile.email,
+                phone: profile.phone,
+                location: profile.location
+              })}
+              disabled={isSavingProfile}
+              className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+            >
+              {isSavingProfile ? (
+                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                <Icon name="check" className="w-5 h-5" />
+              )}
+              Save Details
+            </button>
+          </div>
         </section>
 
         {/* Social Links */}
@@ -1134,6 +1156,24 @@ function DashboardContent() {
                 placeholder="github.com/username"
               />
             </div>
+          </div>
+          <div className="flex justify-end mt-8 border-t border-slate-50 pt-6">
+            <button
+              onClick={() => saveProfileSection({
+                linkedin: profile.linkedin,
+                portfolio: profile.portfolio,
+                github: profile.github
+              })}
+              disabled={isSavingProfile}
+              className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+            >
+              {isSavingProfile ? (
+                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                <Icon name="check" className="w-5 h-5" />
+              )}
+              Save Links
+            </button>
           </div>
         </section>
 
@@ -1232,23 +1272,25 @@ function DashboardContent() {
                       placeholder="Briefly describe your impact..."
                     />
                   </div>
-                  <div className="md:col-span-2 flex justify-end">
-                    <button
-                      onClick={() => saveProfileSection({ work_history: profile.work_history })}
-                      disabled={isSavingProfile}
-                      className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
-                    >
-                      {isSavingProfile ? (
-                        <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></span>
-                      ) : (
-                        <Icon name="check" className="w-3.5 h-3.5" />
-                      )}
-                      Save Section
-                    </button>
-                  </div>
                 </div>
               </div>
             ))}
+            {profile.work_history.length > 0 && (
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={() => saveProfileSection({ work_history: profile.work_history })}
+                  disabled={isSavingProfile}
+                  className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {isSavingProfile ? (
+                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <Icon name="check" className="w-5 h-5" />
+                  )}
+                  Save Experience
+                </button>
+              </div>
+            )}
             {profile.work_history.length === 0 && (
               <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
                 <p className="text-slate-400 text-sm font-medium italic">No work experience added yet.</p>
@@ -1338,23 +1380,26 @@ function DashboardContent() {
                       placeholder="e.g. June 2020"
                     />
                   </div>
-                  <div className="md:col-span-2 flex justify-end">
-                    <button
-                      onClick={() => saveProfileSection({ education: profile.education })}
-                      disabled={isSavingProfile}
-                      className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
-                    >
-                      {isSavingProfile ? (
-                        <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></span>
-                      ) : (
-                        <Icon name="check" className="w-3.5 h-3.5" />
-                      )}
-                      Save Section
-                    </button>
-                  </div>
                 </div>
               </div>
             ))}
+            {profile.education.length > 0 && (
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={() => saveProfileSection({ education: profile.education })}
+                  disabled={isSavingProfile}
+                  className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {isSavingProfile ? (
+                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <Icon name="check" className="w-5 h-5" />
+                  )}
+                  Save Education
+                </button>
+              </div>
+            )
+            }
             {profile.education.length === 0 && (
               <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
                 <p className="text-slate-400 text-sm font-medium italic">No education added yet.</p>
@@ -1444,7 +1489,7 @@ function DashboardContent() {
                 ) : (
                   <Icon name="check" className="w-5 h-5" />
                 )}
-                Save Section
+                Save Skills
               </button>
             </div>
           </div>
