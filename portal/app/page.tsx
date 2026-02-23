@@ -113,7 +113,8 @@ function DashboardContent() {
     resume_text: '',
     work_history: [],
     education: [],
-    skills: []
+    skills: [],
+    custom_responses: {}
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState({ text: '', type: '' });
@@ -131,7 +132,8 @@ function DashboardContent() {
           ...data,
           work_history: typeof data.work_history === 'string' ? JSON.parse(data.work_history) : (data.work_history || []),
           education: typeof data.education === 'string' ? JSON.parse(data.education) : (data.education || []),
-          skills: typeof data.skills === 'string' ? JSON.parse(data.skills) : (data.skills || [])
+          skills: typeof data.skills === 'string' ? JSON.parse(data.skills) : (data.skills || []),
+          custom_responses: typeof data.custom_responses === 'string' ? JSON.parse(data.custom_responses) : (data.custom_responses || {})
         });
       }
     } catch (e) {

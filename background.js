@@ -84,4 +84,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // Keep channel open
   }
+
+  if (request.action === "learnResponse") {
+    chrome.storage.local.get(['firebaseToken'], async (result) => {
+      const token = result.firebaseToken;
+      if (!token) return;
+
+      const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
+
+      try {
+        const getRes = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await getRes.json();
+        const profile = { ...data };
+
+        // Ensure proper JSON parsing
+        if (typeof profile.work_history === 'string') profile.work_history = JSON.parse(profile.work_history);
+        if (typeof profile.education === 'string') profile.education = JSON.parse(profile.education);
+        if (typeof profile.skills === 'string') profile.skills = JSON.parse(profile.skills);
+
+        if (typeof profile.custom_responses === 'string') {
+          profile.custom_responses = JSON.parse(profile.custom_responses);
+        } else {
+          profile.custom_responses = profile.custom_responses || {};
+        }
+
+        profile.custom_responses[request.question.toLowerCase().trim()] = request.answer;
+
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(profile)
+        });
+      } catch (e) {
+        console.error('Learning failed:', e);
+      }
+    });
+    return true;
+  }
 });
