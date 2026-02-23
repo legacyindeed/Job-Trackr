@@ -249,21 +249,6 @@ async function autofillForm(profile) {
         el.blur();
     };
 
-    const personalMappings = {
-        'full_name': ['full name', 'fullname'],
-        'first_name': ['first name', 'firstname', 'given name', 'preferred first name'],
-        'last_name': ['last name', 'lastname', 'family name', 'surname', 'preferred last name'],
-        'email': ['email', 'email address', 'confirm email', 'confirm your email'],
-        'phone': ['phone', 'mobile', 'telephone', 'tel', 'phone number'],
-        'linkedin': ['linkedin'],
-        'portfolio': ['portfolio', 'website', 'personal site'],
-        'github': ['github'],
-        'address': ['address', 'street', 'location'],
-        'city': ['city', 'town'],
-        'state': ['state', 'province', 'region'],
-        'zip': ['zip', 'postal', 'postcode']
-    };
-
     const names = (profile.full_name || '').split(' ');
     const firstName = names[0] || '';
     const lastName = names.slice(1).join(' ') || '';
@@ -463,6 +448,21 @@ function parseCompany(hostname, pathname) {
     return cleanUrlPart(parts[0]);
 }
 
+const personalMappings = {
+    'full_name': ['full name', 'fullname'],
+    'first_name': ['first name', 'firstname', 'given name', 'preferred first name', 'given-name', 'first-name', 'first_name'],
+    'last_name': ['last name', 'lastname', 'family name', 'surname', 'preferred last name', 'family-name', 'last-name', 'last_name'],
+    'email': ['email', 'email address', 'confirm email', 'confirm your email', 'email-address', 'confirm-email'],
+    'phone': ['phone', 'mobile', 'telephone', 'tel', 'phone number', 'phone-number', 'mobile-phone'],
+    'linkedin': ['linkedin'],
+    'portfolio': ['portfolio', 'website', 'personal site'],
+    'github': ['github'],
+    'address': ['address', 'street', 'location'],
+    'city': ['city', 'town'],
+    'state': ['state', 'province', 'region'],
+    'zip': ['zip', 'postal', 'postcode']
+};
+
 if (isJobPage()) {
     chrome.storage.local.get(['savedJobs', 'ignoredUrls'], (result) => {
         const currentUrl = window.location.href;
@@ -470,11 +470,11 @@ if (isJobPage()) {
             setTimeout(injectTrackerOverlay, 2500);
         }
     });
-
-    // Listen for cross-frame autofill triggers
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.action === "executeAutofill") {
-            autofillForm(message.profile);
-        }
-    });
 }
+
+// Global Listener: Must be outside isJobPage so iframes (which might have different URLs) still listen
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "executeAutofill") {
+        autofillForm(message.profile);
+    }
+});
