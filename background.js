@@ -145,4 +145,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (request.action === "broadcastAutofill") {
+    // Send the profile data to all frames in the sender's tab
+    const tabId = sender.tab.id;
+    chrome.tabs.sendMessage(tabId, {
+      action: "executeAutofill",
+      profile: request.profile
+    });
+    return true;
+  }
 });

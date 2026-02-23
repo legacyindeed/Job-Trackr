@@ -29,6 +29,8 @@ function isJobPage() {
 
 // Function to inject the overlay
 function injectTrackerOverlay() {
+    // ONLY inject overlay in the top-level frame
+    if (window !== window.top) return;
     if (document.getElementById('job-tracker-overlay')) return;
 
     const overlay = document.createElement('div');
@@ -84,19 +86,16 @@ function injectTrackerOverlay() {
             const hasData = profile && typeof profile === 'object' && Object.keys(profile).length > 0;
 
             if (response && !response.error && hasData) {
-                const count = await autofillForm(profile);
-                if (count > 0) {
-                    autofillBtn.textContent = `Autofilled ${count} fields!`;
-                    autofillBtn.style.backgroundColor = '#10b981';
-                } else {
-                    autofillBtn.textContent = 'No matching fields';
-                    autofillBtn.style.backgroundColor = '#f59e0b';
-                }
+                // BROADCAST to all frames instead of just local fill
+                chrome.runtime.sendMessage({ action: "broadcastAutofill", profile: profile });
+
+                autofillBtn.textContent = `Processing all frames...`;
+                autofillBtn.style.backgroundColor = '#10b981';
 
                 setTimeout(() => {
                     autofillBtn.textContent = 'Autofill Application';
                     autofillBtn.style.backgroundColor = '';
-                }, 3000);
+                }, 4000);
             } else {
                 autofillBtn.textContent = response?.error === 'Not logged in' ? 'Login to Portal' : 'No Data Found';
                 autofillBtn.style.backgroundColor = '#ef4444';
@@ -469,6 +468,13 @@ if (isJobPage()) {
         const currentUrl = window.location.href;
         if (!result.savedJobs?.some(j => j.url === currentUrl) && !result.ignoredUrls?.includes(currentUrl)) {
             setTimeout(injectTrackerOverlay, 2500);
+        }
+    });
+
+    // Listen for cross-frame autofill triggers
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action === "executeAutofill") {
+            autofillForm(message.profile);
         }
     });
 }
