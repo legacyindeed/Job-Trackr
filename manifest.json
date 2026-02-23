@@ -11,7 +11,8 @@
         "clipboardWrite"
     ],
     "host_permissions": [
-        "https://job-trackr-ten.vercel.app/*"
+        "https://job-trackr-ten.vercel.app/*",
+        "http://localhost:3000/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -30,7 +31,8 @@
         },
         {
             "matches": [
-                "https://job-trackr-ten.vercel.app/*"
+                "https://job-trackr-ten.vercel.app/*",
+                "http://localhost:3000/*"
             ],
             "js": [
                 "auth-sync.js"
@@ -53,7 +55,8 @@
     },
     "externally_connectable": {
         "matches": [
-            "https://job-trackr-ten.vercel.app/*"
+            "https://job-trackr-ten.vercel.app/*",
+            "http://localhost:3000/*"
         ]
     }
 }
