@@ -194,9 +194,23 @@ async function autofillForm(profile) {
         el.focus();
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await new Promise(r => setTimeout(r, 150));
+
+        // Handle search-dropdowns (like School/Location)
+        // Many ATS use libraries that listen for specific keystrokes
         el.value = val;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Trigger a 'keyup' or similar to open the dropdown
+        el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, keyCode: 13 }));
+        await new Promise(r => setTimeout(r, 300)); // wait for dropdown
+
+        // If it's a known Greenhouse dropdown, try to click the first result
+        const results = document.querySelectorAll('.select2-results__option, .autocomplete-result, [role="option"]');
+        if (results.length > 0) {
+            results[0].click();
+        }
+
         await new Promise(r => setTimeout(r, 100));
         el.blur();
     };
@@ -298,10 +312,25 @@ function extractJobDetails() {
     let location = 'N/A', salary = 'N/A', title = null, jobType = 'N/A', description = '';
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
 
-    const h1 = document.querySelector('h1');
-    if (h1) title = clean(h1.textContent);
+    const titleSelectors = ['h1', '.app-title', '.job-title', '.header-container h1'];
+    for (const s of titleSelectors) {
+        const el = document.querySelector(s);
+        if (el) {
+            title = clean(el.textContent);
+            break;
+        }
+    }
 
-    const descSelectors = ['#jobDescriptionText', '.show-more-less-html__markup', '.jobs-description__container', '[data-automation-id="jobPostingDescription"]', '#content.job-description', '.job-description'];
+    const descSelectors = [
+        '#jobDescriptionText',
+        '.show-more-less-html__markup',
+        '.jobs-description__container',
+        '[data-automation-id="jobPostingDescription"]',
+        '#content',
+        '.job-description',
+        '#description',
+        '.description'
+    ];
     for (const selector of descSelectors) {
         const el = document.querySelector(selector);
         if (el && el.innerText.trim().length > 50) {
@@ -313,6 +342,15 @@ function extractJobDetails() {
 }
 
 function parseCompany(hostname, pathname) {
+    // Specialized Greenhouse check
+    if (hostname.includes('greenhouse.io')) {
+        const parts = pathname.split('/').filter(p => p);
+        if (parts.length > 0) {
+            // e.g. /doordashusa/jobs/7644873 -> doordashusa
+            return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+        }
+    }
+
     let parts = hostname.split('.');
     if (parts[0] === 'www') parts.shift();
     return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
