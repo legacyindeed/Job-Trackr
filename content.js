@@ -233,7 +233,15 @@ async function autofillForm(profile) {
         await new Promise(r => setTimeout(r, 400)); // wait for dropdown
 
         // click first result
-        const results = document.querySelectorAll('.select2-results__option, .autocomplete-result, [role="option"], .search-result');
+        const results = document.querySelectorAll(
+            '.select2-results__option, ' +
+            '.autocomplete-result, ' +
+            '[role="option"], ' +
+            '.search-result, ' +
+            '.sr-result, ' +
+            '.suggestions-list li, ' +
+            '.tt-suggestion'
+        );
         if (results.length > 0) {
             results[0].click();
         }
@@ -246,8 +254,8 @@ async function autofillForm(profile) {
         'full_name': ['full name', 'fullname'],
         'first_name': ['first name', 'firstname', 'given name', 'preferred first name'],
         'last_name': ['last name', 'lastname', 'family name', 'surname', 'preferred last name'],
-        'email': ['email', 'email address'],
-        'phone': ['phone', 'mobile', 'telephone', 'tel'],
+        'email': ['email', 'email address', 'confirm email', 'confirm your email'],
+        'phone': ['phone', 'mobile', 'telephone', 'tel', 'phone number'],
         'linkedin': ['linkedin'],
         'portfolio': ['portfolio', 'website', 'personal site'],
         'github': ['github'],
@@ -340,7 +348,15 @@ function extractJobDetails() {
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
 
     // 1. Title Extraction
-    const titleSelectors = ['h1', '.app-title', '.job-title', '.header-container h1', 'title'];
+    const titleSelectors = [
+        'h1',
+        '.app-title',
+        '.job-title',
+        '.header-container h1',
+        '[data-qa="job-title"]',
+        '.job-header h2',
+        'title'
+    ];
     for (const s of titleSelectors) {
         const el = s === 'title' ? document.title : document.querySelector(s)?.textContent;
         if (el && el.trim()) {
@@ -352,6 +368,7 @@ function extractJobDetails() {
 
     // 2. Comprehensive Description Extraction
     const descSelectors = [
+        '.job-description-content', // SmartRecruiters
         '#jobDescriptionText', // Indeed
         '.show-more-less-html__markup', // LinkedIn
         '.jobs-description__container', // LinkedIn
@@ -379,7 +396,6 @@ function extractJobDetails() {
         description = candidates[0].html;
 
         // --- Salary Extraction ---
-        // Look for common salary patterns in the text
         const bodyText = candidates[0].text;
         const salaryRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?(?:\s*\/|\s+per\s+)(?:yr|year|hr|hour|annually)?/i;
         const simpleRangeRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?/i;
@@ -398,7 +414,16 @@ function extractJobDetails() {
     }
 
     // 3. Location & Type (Heuristic Fallbacks)
-    if (location === 'N/A') {
+    const locSelectors = ['.location', '[data-qa="job-location"]', '.job-header p'];
+    for (const s of locSelectors) {
+        const el = document.querySelector(s);
+        if (el && el.innerText.trim()) {
+            location = clean(el.innerText);
+            break;
+        }
+    }
+
+    if (location === 'N/A' || location === '') {
         const fullText = document.body.innerText;
         if (fullText.match(/remote/i)) location = 'Remote';
         // Try meta tags
@@ -410,23 +435,33 @@ function extractJobDetails() {
 }
 
 function parseCompany(hostname, pathname) {
+    const cleanUrlPart = (p) => p ? p.charAt(0).toUpperCase() + p.slice(1) : '';
+
+    // Specialized SmartRecruiters check
+    if (hostname.includes('smartrecruiters.com')) {
+        const parts = pathname.split('/').filter(p => p);
+        const companyIdx = parts.indexOf('company');
+        if (companyIdx !== -1 && parts[companyIdx + 1]) {
+            return cleanUrlPart(parts[companyIdx + 1]);
+        }
+    }
+
     // Specialized Greenhouse check
     if (hostname.includes('greenhouse.io') || hostname.includes('boards.greenhouse.io')) {
         const parts = pathname.split('/').filter(p => p);
         if (parts.length > 0) {
-            return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+            return cleanUrlPart(parts[0]);
         }
     }
 
-    // Heuristic for subdomains (e.g. scopely.com hosted boards)
+    // Heuristic for subdomains
     let parts = hostname.split('.');
-    if (parts.length > 2) {
-        // usually companyname.greenhouse.io
-        return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    if (parts.length > 2 && !['www', 'jobs', 'careers'].includes(parts[0])) {
+        return cleanUrlPart(parts[0]);
     }
 
     if (parts[0] === 'www') parts.shift();
-    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    return cleanUrlPart(parts[0]);
 }
 
 if (isJobPage()) {
