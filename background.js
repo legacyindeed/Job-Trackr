@@ -55,45 +55,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "getProfile") {
-    chrome.storage.local.get(['firebaseToken'], async (result) => {
+    chrome.storage.local.get(['firebaseToken'], (result) => {
       const token = result.firebaseToken;
       if (!token) {
         sendResponse({ error: 'Not logged in' });
         return;
       }
 
-      // Try local dev first if applicable, then production
-      const PROD_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
-      const LOCAL_URL = 'http://localhost:3000/api/user/profile';
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-      try {
-        // We attempt to detect if we're in a dev environment or just try production
-        // For now, let's try production with better error handling.
-        const res = await fetch(PROD_URL, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          signal: controller.signal
+      const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
+      fetch(API_URL, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Server: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          // If data is null (new user), return empty object to prevent content script crash
+          sendResponse({ profile: data || {} });
+        })
+        .catch(err => {
+          console.error('Profile fetch error:', err);
+          sendResponse({ error: err.message });
         });
-
-        clearTimeout(timeoutId);
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `Server Error: ${res.status}`);
-        }
-
-        const data = await res.json();
-        sendResponse({ profile: data });
-      } catch (err) {
-        clearTimeout(timeoutId);
-        console.error('Profile fetch error:', err);
-
-        // If production fails, and it's a network error, maybe try local?
-        // But for "Stuck on Fetching", it's usually because sendResponse wasn't called.
-        sendResponse({ error: err.message || 'Failed to fetch profile' });
-      }
     });
     return true; // Keep channel open
   }

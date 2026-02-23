@@ -110,7 +110,10 @@ function injectTrackerOverlay() {
     autofillBtn.addEventListener('click', () => {
         autofillBtn.textContent = 'Fetching...';
         chrome.runtime.sendMessage({ action: "getProfile" }, (response) => {
-            if (response && response.profile && Object.keys(response.profile).length > 0) {
+            const profile = response?.profile;
+            const hasData = profile && typeof profile === 'object' && Object.keys(profile).length > 0;
+
+            if (response && !response.error && hasData) {
                 const count = autofillForm(response.profile);
                 if (count > 0) {
                     autofillBtn.textContent = `Autofilled ${count} fields!`;
