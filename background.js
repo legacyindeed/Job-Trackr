@@ -62,8 +62,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
 
-      const API_URL = 'http://localhost:3000/api/user/profile'; // Developer local mode
-      // const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile'; // Production
+      const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
 
       fetch(API_URL, {
         headers: {

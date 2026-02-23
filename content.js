@@ -110,16 +110,22 @@ function injectTrackerOverlay() {
     autofillBtn.addEventListener('click', () => {
         autofillBtn.textContent = 'Fetching...';
         chrome.runtime.sendMessage({ action: "getProfile" }, (response) => {
-            if (response && response.profile) {
-                autofillForm(response.profile);
-                autofillBtn.textContent = 'Autofilled!';
-                autofillBtn.style.backgroundColor = '#10b981';
+            if (response && response.profile && Object.keys(response.profile).length > 0) {
+                const count = autofillForm(response.profile);
+                if (count > 0) {
+                    autofillBtn.textContent = `Autofilled ${count} fields!`;
+                    autofillBtn.style.backgroundColor = '#10b981';
+                } else {
+                    autofillBtn.textContent = 'No matching fields';
+                    autofillBtn.style.backgroundColor = '#f59e0b';
+                }
+
                 setTimeout(() => {
                     autofillBtn.textContent = 'Autofill Application';
                     autofillBtn.style.backgroundColor = '';
-                }, 2000);
+                }, 3000);
             } else {
-                autofillBtn.textContent = 'Login to Portal';
+                autofillBtn.textContent = response?.error === 'Not logged in' ? 'Login to Portal' : 'No Data Found';
                 autofillBtn.style.backgroundColor = '#ef4444';
                 setTimeout(() => {
                     autofillBtn.textContent = 'Autofill Application';
@@ -224,67 +230,125 @@ function injectTrackerOverlay() {
 function autofillForm(profile) {
     if (!profile) return;
 
-    // Helper to set value and trigger events
+    // Helper to set value and trigger events properly for React/Vue listeners
     const setVal = (el, val) => {
         if (!el || !val) return;
+        el.focus();
         el.value = val;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.blur();
     };
 
-    // 1. Common Personal Fields Mapping
+    // Advanced fuzzy mapping
     const personalMappings = {
-        'full_name': ['input[name*="name"]', 'input[id*="name"]', 'input[autocomplete*="name"]'],
-        'first_name': ['input[name*="first"]', 'input[id*="first"]'],
-        'last_name': ['input[name*="last"]', 'input[id*="last"]'],
-        'email': ['input[type="email"]', 'input[name*="email"]', 'input[id*="email"]'],
-        'phone': ['input[type="tel"]', 'input[name*="phone"]', 'input[id*="phone"]', 'input[name*="mobile"]'],
-        'linkedin': ['input[name*="linkedin"]', 'input[id*="linkedin"]', 'input[placeholder*="linkedin"]'],
-        'portfolio': ['input[name*="portfolio"]', 'input[name*="website"]', 'input[id*="website"]', 'input[placeholder*="website"]'],
-        'github': ['input[name*="github"]', 'input[id*="github"]', 'input[placeholder*="github"]']
+        'full_name': ['full name', 'fullname'],
+        'first_name': ['first name', 'firstname', 'given name'],
+        'last_name': ['last name', 'lastname', 'family name', 'surname'],
+        'email': ['email', 'email address'],
+        'phone': ['phone', 'mobile', 'telephone', 'tel'],
+        'linkedin': ['linkedin'],
+        'portfolio': ['portfolio', 'website', 'personal site'],
+        'github': ['github'],
+        'address': ['address', 'street', 'location'],
+        'city': ['city', 'town'],
+        'state': ['state', 'province', 'region'],
+        'zip': ['zip', 'postal', 'postcode']
     };
 
-    // Split full name if needed
+    // Extract names and address parts
     const names = (profile.full_name || '').split(' ');
     const firstName = names[0] || '';
     const lastName = names.slice(1).join(' ') || '';
 
-    // Loop through mappings
-    Object.entries(personalMappings).forEach(([key, selectors]) => {
-        let value = profile[key];
-        if (key === 'first_name') value = firstName;
-        if (key === 'last_name') value = lastName;
+    // Parse location (e.g., "San Francisco, CA, 94105")
+    const locParts = (profile.location || '').split(',').map(p => p.trim());
+    const city = locParts[0] || '';
+    const state = locParts[1] || '';
+    const zip = locParts[2] || '';
 
-        selectors.forEach(selector => {
-            const inputs = document.querySelectorAll(selector);
-            inputs.forEach(input => {
-                if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
-                    // Only fill if empty to avoid overwriting user edits
-                    if (!input.value) {
-                        setVal(input, value);
-                    }
-                }
-            });
-        });
+    // Data source for mappings
+    const dataSource = {
+        ...profile,
+        first_name: firstName,
+        last_name: lastName,
+        address: profile.location, // Fallback to full location for street address field
+        city: city,
+        state: state,
+        zip: zip
+    };
+
+    // 1. Map simple text inputs
+    let fillCount = 0;
+    const allInputs = document.querySelectorAll('input, textarea');
+
+    allInputs.forEach(input => {
+        // Skip hidden, button, or search
+        if (['hidden', 'submit', 'button', 'search', 'checkbox', 'radio'].includes(input.type)) return;
+
+        // Skip if already filled
+        if (input.value && input.value.trim().length > 0) return;
+
+        const name = (input.name || '').toLowerCase();
+        const id = (input.id || '').toLowerCase();
+        const placeholder = (input.placeholder || '').toLowerCase();
+        const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+
+        // Find associated label text
+        let labelText = '';
+        if (input.id) {
+            const label = document.querySelector(`label[for="${input.id}"]`);
+            if (label) labelText = label.innerText.toLowerCase();
+        }
+        if (!labelText) {
+            const parentLabel = input.closest('label');
+            if (parentLabel) labelText = parentLabel.innerText.toLowerCase();
+        }
+
+        // Try keywords
+        for (const [key, keywords] of Object.entries(personalMappings)) {
+            const val = dataSource[key];
+            if (!val) continue;
+
+            const isMatch = keywords.some(kw =>
+                name.includes(kw) ||
+                id.includes(kw) ||
+                placeholder.includes(kw) ||
+                ariaLabel.includes(kw) ||
+                labelText.includes(kw)
+            );
+
+            if (isMatch) {
+                setVal(input, val);
+                fillCount++;
+                break;
+            }
+        }
     });
 
-    // 2. Work History (Simplified for now - focus on latest role)
+    // 2. Work History (latest role)
     if (profile.work_history && profile.work_history.length > 0) {
         const latest = profile.work_history[0];
-        const workSelectors = {
-            'company': ['input[name*="company"]', 'input[id*="company"]', 'input[name*="org"]'],
-            'title': ['input[name*="title"]', 'input[id*="title"]']
+        const workMappings = {
+            'company': ['company', 'employer', 'organization'],
+            'title': ['title', 'role', 'position']
         };
 
-        Object.entries(workSelectors).forEach(([key, selectors]) => {
-            selectors.forEach(selector => {
-                const inputs = document.querySelectorAll(selector);
-                inputs.forEach(input => {
-                    if (!input.value) setVal(input, latest[key]);
-                });
-            });
+        allInputs.forEach(input => {
+            if (input.value) return;
+
+            const context = (input.name + input.id + input.placeholder + (input.closest('label')?.innerText || '')).toLowerCase();
+
+            for (const [key, keywords] of Object.entries(workMappings)) {
+                if (keywords.some(kw => context.includes(kw)) && latest[key]) {
+                    setVal(input, latest[key]);
+                    fillCount++;
+                }
+            }
         });
     }
+
+    return fillCount;
 }
 
 function extractJobDetails() {
