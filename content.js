@@ -65,7 +65,21 @@ function injectTrackerOverlay() {
 
     autofillBtn.addEventListener('click', () => {
         autofillBtn.textContent = 'Fetching...';
+
+        // Safety timeout to prevent being "stuck"
+        const safetyTimeout = setTimeout(() => {
+            if (autofillBtn.textContent === 'Fetching...') {
+                autofillBtn.textContent = 'Timed Out';
+                autofillBtn.style.backgroundColor = '#ef4444';
+                setTimeout(() => {
+                    autofillBtn.textContent = 'Autofill Application';
+                    autofillBtn.style.backgroundColor = '';
+                }, 3000);
+            }
+        }, 12000);
+
         chrome.runtime.sendMessage({ action: "getProfile" }, async (response) => {
+            clearTimeout(safetyTimeout);
             const profile = response?.profile;
             const hasData = profile && typeof profile === 'object' && Object.keys(profile).length > 0;
 
@@ -195,18 +209,31 @@ async function autofillForm(profile) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await new Promise(r => setTimeout(r, 150));
 
+        // Handle native select elements
+        if (el.tagName === 'SELECT') {
+            const options = Array.from(el.options);
+            const bestMatch = options.find(opt =>
+                opt.text.toLowerCase().includes(val.toLowerCase()) ||
+                opt.value.toLowerCase().includes(val.toLowerCase())
+            );
+            if (bestMatch) {
+                el.value = bestMatch.value;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return;
+        }
+
         // Handle search-dropdowns (like School/Location)
-        // Many ATS use libraries that listen for specific keystrokes
         el.value = val;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // Trigger a 'keyup' or similar to open the dropdown
+        // Trigger keys to open dropdown
         el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, keyCode: 13 }));
-        await new Promise(r => setTimeout(r, 300)); // wait for dropdown
+        await new Promise(r => setTimeout(r, 400)); // wait for dropdown
 
-        // If it's a known Greenhouse dropdown, try to click the first result
-        const results = document.querySelectorAll('.select2-results__option, .autocomplete-result, [role="option"]');
+        // click first result
+        const results = document.querySelectorAll('.select2-results__option, .autocomplete-result, [role="option"], .search-result');
         if (results.length > 0) {
             results[0].click();
         }
@@ -217,8 +244,8 @@ async function autofillForm(profile) {
 
     const personalMappings = {
         'full_name': ['full name', 'fullname'],
-        'first_name': ['first name', 'firstname', 'given name'],
-        'last_name': ['last name', 'lastname', 'family name', 'surname'],
+        'first_name': ['first name', 'firstname', 'given name', 'preferred first name'],
+        'last_name': ['last name', 'lastname', 'family name', 'surname', 'preferred last name'],
         'email': ['email', 'email address'],
         'phone': ['phone', 'mobile', 'telephone', 'tel'],
         'linkedin': ['linkedin'],
@@ -246,11 +273,11 @@ async function autofillForm(profile) {
     };
 
     let fillCount = 0;
-    const allInputs = Array.from(document.querySelectorAll('input, textarea'));
+    const allInputs = Array.from(document.querySelectorAll('input, textarea, select'));
 
     for (const input of allInputs) {
         if (['hidden', 'submit', 'button', 'search', 'checkbox', 'radio'].includes(input.type)) continue;
-        if (input.value && input.value.trim().length > 0) continue;
+        if (input.value && input.value.trim().length > 0 && input.tagName !== 'SELECT') continue;
 
         const name = (input.name || '').toLowerCase();
         const id = (input.id || '').toLowerCase();
@@ -266,7 +293,7 @@ async function autofillForm(profile) {
             const parentLabel = input.closest('label');
             if (parentLabel) labelTextRaw = parentLabel.innerText;
         }
-        const labelText = labelTextRaw.toLowerCase();
+        const labelText = (labelTextRaw || '').toLowerCase();
 
         let matched = false;
         for (const [key, keywords] of Object.entries(personalMappings)) {
@@ -280,7 +307,7 @@ async function autofillForm(profile) {
         }
 
         if (!matched && profile.custom_responses) {
-            const cleanLabel = labelTextRaw.replace(/\*/g, '').toLowerCase().trim();
+            const cleanLabel = (labelTextRaw || '').replace(/\*/g, '').toLowerCase().trim();
             for (const [learntQ, learntA] of Object.entries(profile.custom_responses)) {
                 if (cleanLabel.includes(learntQ) || learntQ.includes(cleanLabel)) {
                     await setVal(input, learntA);
@@ -295,7 +322,7 @@ async function autofillForm(profile) {
         const latest = profile.work_history[0];
         const workMappings = { 'company': ['company', 'employer'], 'title': ['title', 'role'] };
         for (const input of allInputs) {
-            if (input.value) continue;
+            if (input.value && input.tagName !== 'SELECT') continue;
             const context = (input.name + input.id + input.placeholder + (input.closest('label')?.innerText || '')).toLowerCase();
             for (const [key, keywords] of Object.entries(workMappings)) {
                 if (keywords.some(kw => context.includes(kw)) && latest[key]) {
@@ -312,11 +339,12 @@ function extractJobDetails() {
     let location = 'N/A', salary = 'N/A', title = null, jobType = 'N/A', description = '';
     const clean = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
 
-    const titleSelectors = ['h1', '.app-title', '.job-title', '.header-container h1'];
+    const titleSelectors = ['h1', '.app-title', '.job-title', '.header-container h1', 'title'];
     for (const s of titleSelectors) {
-        const el = document.querySelector(s);
-        if (el) {
-            title = clean(el.textContent);
+        const el = s === 'title' ? document.title : document.querySelector(s)?.textContent;
+        if (el && el.trim()) {
+            title = clean(el);
+            if (s === 'title') title = title.split('|')[0].split('-')[0].trim();
             break;
         }
     }
@@ -329,7 +357,9 @@ function extractJobDetails() {
         '#content',
         '.job-description',
         '#description',
-        '.description'
+        '.description',
+        'article',
+        '.main-content'
     ];
     for (const selector of descSelectors) {
         const el = document.querySelector(selector);
@@ -343,15 +373,20 @@ function extractJobDetails() {
 
 function parseCompany(hostname, pathname) {
     // Specialized Greenhouse check
-    if (hostname.includes('greenhouse.io')) {
+    if (hostname.includes('greenhouse.io') || hostname.includes('boards.greenhouse.io')) {
         const parts = pathname.split('/').filter(p => p);
         if (parts.length > 0) {
-            // e.g. /doordashusa/jobs/7644873 -> doordashusa
             return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
         }
     }
 
+    // Heuristic for subdomains (e.g. scopely.com hosted boards)
     let parts = hostname.split('.');
+    if (parts.length > 2) {
+        // usually companyname.greenhouse.io
+        return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    }
+
     if (parts[0] === 'www') parts.shift();
     return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
 }

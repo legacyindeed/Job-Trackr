@@ -55,34 +55,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "getProfile") {
-    chrome.storage.local.get(['firebaseToken'], (result) => {
-      const token = result.firebaseToken;
-      if (!token) {
-        sendResponse({ error: 'Not logged in' });
-        return;
-      }
+    const handleGetProfile = async () => {
+      try {
+        const result = await new Promise(resolve => chrome.storage.local.get(['firebaseToken'], resolve));
+        const token = result.firebaseToken;
 
-      const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
-      fetch(API_URL, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(async (res) => {
+        if (!token) {
+          sendResponse({ error: 'Not logged in' });
+          return;
+        }
+
+        const API_URL = 'https://job-trackr-ten.vercel.app/api/user/profile';
+
+        // Add a timeout to the fetch
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        try {
+          const res = await fetch(API_URL, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
           if (!res.ok) {
+            if (res.status === 401) {
+              sendResponse({ error: 'Not logged in' });
+              return;
+            }
             const errData = await res.json().catch(() => ({}));
             throw new Error(errData.error || `Server: ${res.status}`);
           }
-          return res.json();
-        })
-        .then(data => {
-          // If data is null (new user), return empty object to prevent content script crash
+
+          const data = await res.json();
           sendResponse({ profile: data || {} });
-        })
-        .catch(err => {
-          console.error('Profile fetch error:', err);
-          sendResponse({ error: err.message });
-        });
-    });
-    return true; // Keep channel open
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          if (fetchErr.name === 'AbortError') {
+            throw new Error('Request timed out. Please check your connection.');
+          }
+          throw fetchErr;
+        }
+      } catch (err) {
+        console.error('Profile fetch failed:', err);
+        sendResponse({ error: err.message || 'Failed to fetch profile' });
+      }
+    };
+
+    handleGetProfile();
+    return true; // Must return true to keep sendResponse valid
   }
 
   if (request.action === "learnResponse") {
