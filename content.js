@@ -363,37 +363,126 @@ function extractJobDetails() {
         }
     }
 
-    // 2. Comprehensive Description Extraction
+    // 2. Description Extraction — platform-specific selectors first, then smart fallback
+    // Try to expand "Show more" on LinkedIn before grabbing text
+    const showMoreBtn = document.querySelector(
+        '.jobs-description__footer-button, .show-more-less-html__button--more, [aria-label*="more"], button.show-more'
+    );
+    if (showMoreBtn && showMoreBtn.offsetParent !== null) {
+        try { showMoreBtn.click(); } catch (e) { }
+    }
+
     const descSelectors = [
-        '.job-description-content', // SmartRecruiters
-        '#jobDescriptionText', // Indeed
-        '.show-more-less-html__markup', // LinkedIn
-        '.jobs-description__container', // LinkedIn
-        '[data-automation-id="jobPostingDescription"]', // Workday
-        '#content', // Greenhouse
-        '#description', // Lever/Generic
-        '.job-description',
-        '.description',
+        // ── LinkedIn ──────────────────────────────────────────────────────────
+        '.jobs-description__content .jobs-box__html-content',
+        '.jobs-description-content__text',
+        '.jobs-description__container',
+        '.show-more-less-html__markup',
+        '.jobs-box__html-content',
+
+        // ── Indeed ────────────────────────────────────────────────────────────
+        '#jobDescriptionText',
+        '.jobsearch-JobComponent-description',
+        '[data-testid="jobsearch-JobComponent-description"]',
+        '.jobsearch-jobDescriptionText',
+
+        // ── Greenhouse ────────────────────────────────────────────────────────
+        '#content .job-post-body',
+        '.job-post-body',
+        '#content div[class*="description"]',
+        '#app_body',
+        '#app',
+
+        // ── Lever ─────────────────────────────────────────────────────────────
+        '.section-wrapper',
+        '.posting-categories + div',
+        '.posting-page .posting',
+
+        // ── Workday ───────────────────────────────────────────────────────────
+        '[data-automation-id="jobPostingDescription"]',
+        '[data-automation-id="job-posting-details"]',
+
+        // ── Ashby ─────────────────────────────────────────────────────────────
+        '[class*="JobPosting_description"]',
+        '[class*="jobPosting-description"]',
+        '[class*="JobPostingDescription"]',
+        '.ashby-job-posting-brief-description',
+
+        // ── SmartRecruiters ───────────────────────────────────────────────────
+        '.job-description-content',
+        '.job-sections',
+        '[class*="JobDescription"]',
+
+        // ── Rippling ──────────────────────────────────────────────────────────
+        '[class*="JobContent"]',
+        '[class*="JobPostingContent"]',
+        '[class*="job-posting-content"]',
+
+        // ── BambooHR ──────────────────────────────────────────────────────────
+        '#BambooHR-ATS',
+        '.BambooHR-ATS .description',
+
+        // ── Wellfound / AngelList ─────────────────────────────────────────────
+        '[class*="JobListingDescription"]',
+        '[data-test="job-description"]',
+
+        // ── Generic ATS attribute wildcards ──────────────────────────────────
+        '[id*="job-description"]',
+        '[id*="jobDescription"]',
+        '[id*="job_description"]',
+        '[class*="job-description"]',
+        '[class*="jobDescription"]',
+        '[class*="job_description"]',
+        '[data-qa="job-description"]',
+        '[data-automation="job-description"]',
+        '[aria-label*="job description"]',
+
+        // ── Generic fallbacks (broad but ordered carefully) ───────────────────
+        '#description',
+        '.description-body',
+        '.job-details-content',
+        '.job-detail',
         'article',
-        '.main-content',
-        'main'
     ];
 
     let candidates = [];
+    const seenEls = new Set();
     for (const selector of descSelectors) {
-        const el = document.querySelector(selector);
-        if (el && el.innerText.trim().length > 100) {
-            candidates.push({ html: el.innerHTML, text: el.innerText.trim(), length: el.innerText.length });
+        let els;
+        try { els = document.querySelectorAll(selector); } catch (e) { continue; }
+        for (const el of els) {
+            if (seenEls.has(el)) continue;
+            seenEls.add(el);
+            const text = el.innerText?.trim() || '';
+            if (text.length > 150) {
+                candidates.push({ el, html: el.innerHTML, text, length: text.length });
+            }
         }
     }
 
-    // Pick the one with the most content (likely the full JD)
-    if (candidates.length > 0) {
-        candidates.sort((a, b) => b.length - a.length);
-        description = candidates[0].html;
+    // Smart fallback: scan all large text blocks, require job-related keywords
+    if (candidates.length === 0) {
+        const jobKeywords = /responsibilit|qualif|requirement|experience|skill|role|position|about the (job|role|team)|what you.ll|who you are|we.re looking/i;
+        const allBlocks = document.querySelectorAll('div, section');
+        for (const el of allBlocks) {
+            // Skip common noise elements
+            if (el.closest('nav, header, footer, aside, [role="navigation"], [role="banner"]')) continue;
+            const text = el.innerText?.trim() || '';
+            if (text.length > 300 && jobKeywords.test(text)) {
+                candidates.push({ el, html: el.innerHTML, text, length: text.length });
+            }
+        }
+    }
 
-        // --- Salary Extraction (extended patterns) ---
-        const bodyText = candidates[0].text;
+    if (candidates.length > 0) {
+        // Prefer the most specific (smallest qualifying) match — avoids grabbing entire page
+        candidates.sort((a, b) => a.length - b.length);
+        // But must be at least 200 chars
+        const best = candidates.find(c => c.length >= 200) || candidates[0];
+        description = best.html;
+
+        // --- Salary Extraction from description text (extended patterns) ---
+        const bodyText = best.text;
         // Matches: $120,000 - $150,000/yr | $45/hr | $120K–$150K | 120,000 - 150,000 USD
         const salaryPatterns = [
             /\$\s*[\d,]+(?:\.\d+)?\s*[kK]?\s*[-–—to]+\s*\$\s*[\d,]+(?:\.\d+)?\s*[kK]?\s*(?:\/|per\s+)?(?:hr|hour|yr|year|annually|annum)?/i,
@@ -405,24 +494,36 @@ function extractJobDetails() {
             const match = bodyText.match(pattern);
             if (match) { salary = match[0].trim(); break; }
         }
+
+        // Also check full page text for salary if not found in description
+        if (salary === 'N/A') {
+            const fullText = document.body.innerText;
+            for (const pattern of salaryPatterns) {
+                const match = fullText.match(pattern);
+                if (match) { salary = match[0].trim(); break; }
+            }
+        }
     }
 
-    // 3. Location & Type (Heuristic Fallbacks)
-    const locSelectors = ['.location', '[data-qa="job-location"]', '.job-header p'];
+    // 3. Location & Type
+    const locSelectors = [
+        '.location', '[data-qa="job-location"]', '.job-header p',
+        '[class*="location"]', '[data-automation-id="locations"]',
+        '.jobs-unified-top-card__bullet', // LinkedIn
+        '[data-testid*="location"]',
+    ];
     for (const s of locSelectors) {
         const el = document.querySelector(s);
-        if (el && el.innerText.trim()) {
+        if (el && el.innerText.trim() && el.innerText.trim().length < 80) {
             location = clean(el.innerText);
             break;
         }
     }
 
     if (location === 'N/A' || location === '') {
-        const fullText = document.body.innerText;
-        if (fullText.match(/remote/i)) location = 'Remote';
-        // Try meta tags
         const metaLoc = document.querySelector('meta[name*="location"], meta[property*="location"]');
         if (metaLoc) location = metaLoc.content;
+        else if (document.body.innerText.match(/\bremote\b/i)) location = 'Remote';
     }
 
     return { title, location, salary, jobType, description };
