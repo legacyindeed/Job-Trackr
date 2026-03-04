@@ -1,30 +1,78 @@
-// Check if current page is likely a job application
+// Returns true only for individual job POSTING pages, not listing/search/landing pages.
 function isJobPage() {
-    const url = window.location.href.toLowerCase();
-    const knownDomains = [
-        'linkedin.com/jobs', 'indeed.com', 'glassdoor.com', 'monster.com',
-        'ziprecruiter.com', 'greenhouse.io', 'lever.co', 'workday.com',
-        'myworkdayjobs.com', 'ashby.hq', 'ashbyhq.com', 'smartrecruiters.com',
-        'breezy.hr', 'applytojob.com', 'careers.google.com', 'careers.microsoft.com',
-        'jobs.apple.com', 'amazon.jobs', 'facebook.com/careers', 'netflix.com/jobs',
-        'icims.com', 'jobvite.com', 'taleo.net', 'brassring.com', 'avature.net',
-        'oraclecloud.com', 'successfactors.com', 'recruitee.com', 'workable.com',
-        'bamboohr.com', 'fountain.com', 'hired.com', 'ycombinator.com/jobs',
-        'wellfound.com', 'remotive.com', 'weworkremotely.com', 'arc.dev',
-        'himalayas.app', 'otta.com', 'lifeattiktok.com', 'workforcenow.adp.com',
-        'adp.com', 'pinpointhq.com', 'rippling.com', 'societegenerale.com'
+    const url = window.location.href;
+    const urlLower = url.toLowerCase();
+    const pathname = window.location.pathname.toLowerCase();
+
+    // ── HARD EXCLUSIONS: general listing, search, or landing pages ─────────
+    const exclusions = [
+        /linkedin\.com\/jobs\/?([?#]|$)/i,          // LinkedIn jobs tab root/search
+        /linkedin\.com\/jobs\/search/i,
+        /indeed\.com\/?([?#]|$)/i,                   // Indeed homepage
+        /indeed\.com\/(jobs|companies)\/?([?#]|$)/i, // Indeed job list
+        /glassdoor\.com\/Job\/?([?#]|$)/i,
+        /glassdoor\.com\/Jobs\//i,                   // Glassdoor listing pages
+        /\/careers\/?([?#]|$)/i,                     // Generic /careers landing
+        /\/jobs\/?([?#]|$)/i,                        // Generic /jobs landing
+        /\/careers\/search/i,
+        /\/jobs\/search/i,
+        /\/careers\/explore/i,
+        /\/careers\/all/i,
+        /\/careers#/i,
+        /\/open-roles\/?([?#]|$)/i,
     ];
+    if (exclusions.some(r => r.test(url))) return false;
 
-    const keywords = [
-        '/job/', '/jobs/', '/career/', '/careers/', '/apply',
-        '/vacancy/', '/position/', '/posting/', '/job-offers/'
+    // ── KNOWN ATS PLATFORMS: specific URL patterns for individual postings ──
+    const atsPatterns = [
+        /boards\.greenhouse\.io\/[^/]+\/jobs\/\d+/i,
+        /greenhouse\.io\/.*\/jobs\/\d+/i,
+        /jobs\.lever\.co\/[^/]+\/[a-f0-9-]{20,}/i,
+        /lever\.co\/[^/]+\/[a-f0-9-]{20,}/i,
+        /myworkdayjobs\.com\/.*\/job\//i,
+        /smartrecruiters\.com\/[^/]+\/[Jj]ob\//i,
+        /jobs\.ashbyhq\.com\/[^/]+\/[a-f0-9-]{20,}/i,
+        /ashbyhq\.com\/[^/]+\/.*\/[a-f0-9-]{20,}/i,
+        /linkedin\.com\/jobs\/(view|collections\/recommended)\/\d+/i,
+        /indeed\.com\/viewjob/i,
+        /glassdoor\.com\/job-listing\/.*-\d{5,}/i,
+        /careers\.google\.com\/jobs\/results\/\d+/i,
+        /amazon\.jobs\/.*\/\d+/i,
+        /careers\.microsoft\.com\/.*\/job\/\d+/i,
+        /jobs\.apple\.com\/.*\/details\/\d+/i,
+        /icims\.com\/jobs\/\d+/i,
+        /jobvite\.com\/.*\/job\//i,
+        /taleo\.net\/careersection.*requisitionId=\d+/i,
+        /workable\.com\/j\//i,
+        /recruitee\.com\/o\//i,
+        /bamboohr\.com\/jobs\/view\.php/i,
+        /wellfound\.com\/jobs\//i,
+        /ycombinator\.com\/jobs\/[^/]+\/apply/i,
+        /rippling\.com\/jobs\/[^?#]+\/[a-f0-9-]{20,}/i,
+        /workday\.com\/.*job\.htmld/i,
     ];
+    if (atsPatterns.some(r => r.test(url))) return true;
 
-    const domainMatch = knownDomains.some(domain => url.includes(domain));
-    const keywordMatch = keywords.some(keyword => url.includes(keyword));
-    const isTikTok = url.includes('lifeattiktok.com/search/');
+    // ── GENERIC DETECTION: keyword + depth + ID + apply button ─────────────
+    const jobKeywords = ['/job/', '/jobs/', '/career/', '/careers/', '/apply', '/vacancy/', '/position/', '/posting/'];
+    const hasJobKeyword = jobKeywords.some(k => urlLower.includes(k));
+    // URL must have a specific ID (numeric or UUID) — rules out generic landing pages
+    const hasJobId = /[\/=]\d{4,}(\/|$|\?)/.test(url) || /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}/.test(url);
+    // Path must be deep enough (e.g. /careers/engineer-role-12345, not just /careers)
+    const hasDepth = pathname.split('/').filter(p => p.length > 3).length >= 2;
 
-    return domainMatch || keywordMatch || isTikTok;
+    if (hasJobKeyword && (hasJobId || hasDepth)) {
+        return hasApplyButton();
+    }
+
+    return false;
+}
+
+// Secondary signal: checks if page has an apply-type button, confirming it's a job posting
+function hasApplyButton() {
+    const applyPhrases = ['apply now', 'apply for this', 'apply online', 'submit application', 'apply to this', 'easy apply', 'quick apply', 'start application'];
+    const els = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"]'));
+    return els.some(el => applyPhrases.some(phrase => (el.textContent || el.value || '').toLowerCase().includes(phrase)));
 }
 
 // Function to inject the overlay
@@ -48,11 +96,10 @@ function injectTrackerOverlay() {
     <button class="close-btn">&times;</button>
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
         <span style="font-size: 24px;">💼</span>
-        <h3 style="margin: 0; font-size: 16px; color: #1e293b;">Job Application Detected</h3>
+        <h3 style="margin: 0; font-size: 16px; color: #1e293b;">Job Detected</h3>
     </div>
     <p style="margin: 0 0 16px 0; color: #64748b; font-weight: 600; font-size: 14px;" title="${pageTitle}">${displayTitle}</p>
     <div class="actions">
-      <button class="btn-autofill">Autofill Application</button>
       <button class="btn-ignore">Did Not Apply</button>
       <button class="btn-track">Yes, I Applied</button>
     </div>
@@ -63,49 +110,6 @@ function injectTrackerOverlay() {
     const closeBtn = overlay.querySelector('.close-btn');
     const ignoreBtn = overlay.querySelector('.btn-ignore');
     const trackBtn = overlay.querySelector('.btn-track');
-    const autofillBtn = overlay.querySelector('.btn-autofill');
-
-    autofillBtn.addEventListener('click', () => {
-        autofillBtn.textContent = 'Fetching...';
-
-        // Safety timeout to prevent being "stuck"
-        const safetyTimeout = setTimeout(() => {
-            if (autofillBtn.textContent === 'Fetching...') {
-                autofillBtn.textContent = 'Timed Out';
-                autofillBtn.style.backgroundColor = '#ef4444';
-                setTimeout(() => {
-                    autofillBtn.textContent = 'Autofill Application';
-                    autofillBtn.style.backgroundColor = '';
-                }, 3000);
-            }
-        }, 12000);
-
-        chrome.runtime.sendMessage({ action: "getProfile" }, async (response) => {
-            clearTimeout(safetyTimeout);
-            const profile = response?.profile;
-            const hasData = profile && typeof profile === 'object' && Object.keys(profile).length > 0;
-
-            if (response && !response.error && hasData) {
-                // BROADCAST to all frames instead of just local fill
-                chrome.runtime.sendMessage({ action: "broadcastAutofill", profile: profile });
-
-                autofillBtn.textContent = `Processing all frames...`;
-                autofillBtn.style.backgroundColor = '#10b981';
-
-                setTimeout(() => {
-                    autofillBtn.textContent = 'Autofill Application';
-                    autofillBtn.style.backgroundColor = '';
-                }, 4000);
-            } else {
-                autofillBtn.textContent = response?.error === 'Not logged in' ? 'Login to Portal' : 'No Data Found';
-                autofillBtn.style.backgroundColor = '#ef4444';
-                setTimeout(() => {
-                    autofillBtn.textContent = 'Autofill Application';
-                    autofillBtn.style.backgroundColor = '';
-                }, 3000);
-            }
-        });
-    });
 
     closeBtn.addEventListener('click', () => overlay.remove());
 
@@ -388,21 +392,18 @@ function extractJobDetails() {
         candidates.sort((a, b) => b.length - a.length);
         description = candidates[0].html;
 
-        // --- Salary Extraction ---
+        // --- Salary Extraction (extended patterns) ---
         const bodyText = candidates[0].text;
-        const salaryRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?(?:\s*\/|\s+per\s+)(?:yr|year|hr|hour|annually)?/i;
-        const simpleRangeRegex = /\$[\d,]+(?:k)?\s*-\s*\$[\d,]+(?:k)?/i;
-
-        const match = bodyText.match(salaryRegex) || bodyText.match(simpleRangeRegex);
-        if (match) {
-            salary = match[0];
-        } else {
-            // Check for "salary range" keywords
-            const payReg = /(?:salary|pay|compensation|range)\s*[:\-]?\s*([\$\d,\s\-k]{5,40})/i;
-            const payMatch = bodyText.match(payReg);
-            if (payMatch && payMatch[1] && payMatch[1].includes('$')) {
-                salary = payMatch[1].trim();
-            }
+        // Matches: $120,000 - $150,000/yr | $45/hr | $120K–$150K | 120,000 - 150,000 USD
+        const salaryPatterns = [
+            /\$\s*[\d,]+(?:\.\d+)?\s*[kK]?\s*[-–—to]+\s*\$\s*[\d,]+(?:\.\d+)?\s*[kK]?\s*(?:\/|per\s+)?(?:hr|hour|yr|year|annually|annum)?/i,
+            /\$\s*[\d,]+(?:\.\d+)?\s*[kK]?\s*(?:\/|per\s+)?(?:hr|hour|yr|year|annually)/i,
+            /[\d,]+\s*[kK]?\s*[-–—]\s*[\d,]+\s*[kK]?\s*(?:USD|CAD|GBP|EUR)/i,
+            /(?:salary|compensation|pay|base)\s*[:\-]?\s*\$?\s*[\d,]+\s*[kK]?\s*[-–—to]+\s*\$?\s*[\d,]+\s*[kK]?/i,
+        ];
+        for (const pattern of salaryPatterns) {
+            const match = bodyText.match(pattern);
+            if (match) { salary = match[0].trim(); break; }
         }
     }
 
