@@ -1,0 +1,2089 @@
+'use client';
+import { useState, useEffect, Suspense, useMemo, Component, ReactNode } from 'react';
+
+// ─── Error Boundary ────────────────────────────────────────────────────────────
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('Dashboard render error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-slate-50 font-sans">
+          <div className="text-center max-w-md px-6">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Something went wrong</h2>
+            <p className="text-slate-500 text-sm mb-6">
+              The dashboard encountered an error. This is usually a temporary issue with the database connection.
+            </p>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+              className="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────────
+import { useAuth } from '../context/AuthContext';
+import { signOut } from 'firebase/auth';
+import { getFirebaseAuth } from '../lib/firebase';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+
+// Icons as a component
+const Icon = ({ name, className }: { name: string; className?: string }) => {
+  switch (name) {
+    case 'dashboard': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
+    case 'logout': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
+    case 'briefcase': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
+    case 'search': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+    case 'refresh': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
+    case 'pipeline': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
+    case 'bulb': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2v1" /><path d="M12 14c-2.5 0-4-1.5-4-4a4 4 0 0 1 8 0c0 2.5-1.5 4-4 4z" /><path d="M19.07 4.93L17.66 6.34" /><path d="M4.93 4.93L6.34 6.34" /></svg>;
+    case 'download': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+    case 'trash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+    case 'edit': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+    case 'x': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+    case 'check': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+    case 'alert': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+    case 'eye': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+    case 'eye-slash': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
+    case 'plus': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+    case 'book': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>;
+    case 'user': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+    case 'pipeline': return <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3zM8 12h8M12 8v8"></path></svg>;
+    default: return null;
+  }
+};
+
+const motivationalQuotes = [
+  "Believe you can and you're halfway there.",
+  "Your talent determines what you can do. Your motivation determines how much you're willing to do.",
+  "Opportunities don't happen, you create them.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "The future depends on what you do today."
+];
+
+const interviewTips = [
+  "Research the company thoroughly before your interview.",
+  "Practice the STAR method (Situation, Task, Action, Result) for behavioral questions.",
+  "Prepare thoughtful questions to ask the interviewer.",
+  "Follow up with a thank-you email within 24 hours.",
+  "Be ready to discuss your weaknesses as areas for growth."
+];
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+          <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
+      }>
+        <DashboardContent />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+function DashboardContent() {
+  const { user, loading: authLoading } = useAuth();
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [timeFrame, setTimeFrame] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quote, setQuote] = useState('');
+  const [dailyTips, setDailyTips] = useState<string[]>([]);
+  const [isAnonymized, setIsAnonymized] = useState(false);
+  const [chartTimeframe, setChartTimeframe] = useState<'7d' | '30d' | '12m'>('7d');
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['dashboard', 'applications', 'pipeline', 'profile'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(pathname + '?' + params.toString());
+  };
+
+  // Edit State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ title: '', company: '', status: '', salary: '', location: '', notes: '', url: '', description: '' });
+
+  // Add State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '', description: '' });
+  const [viewingDescription, setViewingDescription] = useState<string | null>(null);
+
+  // Profile State
+  const [profile, setProfile] = useState<any>({
+    full_name: '',
+    email: '',
+    phone: '',
+    location: '',
+    linkedin: '',
+    portfolio: '',
+    github: '',
+    resume_text: '',
+    work_history: [],
+    education: [],
+    skills: [],
+    custom_responses: {}
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState({ text: '', type: '' });
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/user/profile', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json().catch(() => null);
+      // Guard: only update profile if response is a valid profile object (not an error object)
+      if (data && res.ok && !data.error) {
+        setProfile({
+          ...data,
+          work_history: typeof data.work_history === 'string' ? JSON.parse(data.work_history) : (data.work_history || []),
+          education: typeof data.education === 'string' ? JSON.parse(data.education) : (data.education || []),
+          skills: typeof data.skills === 'string' ? JSON.parse(data.skills) : (data.skills || []),
+          custom_responses: typeof data.custom_responses === 'string' ? JSON.parse(data.custom_responses) : (data.custom_responses || {})
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching profile:', e);
+    }
+  };
+  const [skillSearch, setSkillSearch] = useState('');
+  const allSuggestedSkills = useMemo(() => [
+    // --- STRATEGY ---
+    'Market Analysis', 'Competitive Intelligence', 'SWOT Analysis', 'Go-to-Market Strategy', 'Financial Modeling',
+    'Strategic Planning', 'Business Case Development', 'M&A Due Diligence', 'Value Proposition Design', 'Customer Segmentation',
+    'Corporate Strategy', 'Partnership Development', 'Growth Strategy', 'Pricing Strategy', 'Scenario Planning',
+    'Industry Research', 'Unit Economics', 'Profitability Analysis', 'Expansion Strategy', 'Risk Management',
+    'Digital Transformation', 'Organizational Design', 'Benchmarking', 'Stakeholder Management', 'Feasibility Studies',
+    // --- PRODUCT ---
+    'Product Roadmap', 'User Story Mapping', 'Agile/Scrum', 'Backlog Prioritization', 'Product Discovery',
+    'Wireframing', 'PRD Writing', 'A/B Testing', 'User Research', 'Product Analytics',
+    'MVP Development', 'Feature Specification', 'Service Design', 'Design Thinking', 'Usability Testing',
+    'Customer Journey Mapping', 'Product Lifecycle Management', 'Growth Hacking', 'SQL for Product', 'Amplitude/Mixpanel',
+    'Launch Management', 'Stakeholder Communication', 'Requirements Gathering', 'Prototyping', 'Jira/Linear',
+    // --- DATA & ANALYTICS ---
+    'Python Programming', 'Tableau', 'SQL (PostgreSQL/BigQuery)', 'R Programming', 'Data Modeling',
+    'Business Intelligence (BI)', 'Data Warehouse (Snowflake)', 'Predictive Modeling', 'Machine Learning Basics', 'Statistical Analysis',
+    // --- OPERATIONS ---
+    'Process Optimization', 'Supply Chain Management', 'Operational Excellence', 'Project Management', 'Change Management',
+    'Data Analysis', 'Cost Reduction', 'Vendor Management', 'Inventory Management', 'Quality Assurance',
+    'SOP Development', 'Resource Allocation', 'Budget Management', 'Lean Six Sigma', 'Performance Metrics (KPIs)',
+    'Logistics Planning', 'Cross-functional Collaboration', 'Risk Mitigation', 'Procurement Strategy', 'Workflow Automation',
+    'Scalability Planning', 'Incident Management', 'Compliance/Regulatory', 'Capacity Planning', 'Business Continuity',
+    // --- SHARED/SOFT SKILLS ---
+    'Data Visualization', 'PowerBI', 'Excel/Google Sheets', 'Executive Presentation', 'Public Speaking',
+    'Negotiation', 'Leadership', 'Mentoring', 'Critical Thinking', 'Problem Solving',
+    'Conflict Resolution', 'Emotional Intelligence', 'Time Management', 'CRM (Salesforce)', 'Business Development'
+  ], []);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!skillSearch) return allSuggestedSkills.filter(s => !(profile.skills || []).includes(s)).slice(0, 12);
+    return allSuggestedSkills
+      .filter(s => s.toLowerCase().includes(skillSearch.toLowerCase()) && !(profile.skills || []).includes(s))
+      .slice(0, 12);
+  }, [skillSearch, profile.skills, allSuggestedSkills]);
+
+  const saveProfileSection = async (sectionData: any) => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    setProfileMessage({ text: '', type: '' });
+    try {
+      const idToken = await user.getIdToken();
+      const updatedProfile = { ...profile, ...sectionData };
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(updatedProfile)
+      });
+      if (res.ok) {
+        setProfile({ ...profile, ...sectionData });
+        setProfileMessage({ text: 'Changes saved successfully!', type: 'success' });
+        setTimeout(() => setProfileMessage({ text: '', type: '' }), 3000);
+      } else {
+        throw new Error('Failed to save profile');
+      }
+    } catch (e) {
+      setProfileMessage({ text: 'Failed to save. Please try again.', type: 'error' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    setProfileMessage({ text: '', type: '' });
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(profile)
+      });
+      if (res.ok) {
+        setProfileMessage({ text: 'Profile saved successfully!', type: 'success' });
+        setTimeout(() => setProfileMessage({ text: '', type: '' }), 3000);
+      } else {
+        throw new Error('Failed to save profile');
+      }
+    } catch (e) {
+      setProfileMessage({ text: 'Failed to save profile. Please try again.', type: 'error' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const addWorkEntry = () => {
+    const newEntry = { company: '', title: '', startDate: '', endDate: '', description: '', current: false };
+    setProfile({ ...profile, work_history: [newEntry, ...profile.work_history] });
+  };
+
+  const addEducationEntry = () => {
+    const newEntry = { school: '', degree: '', startDate: '', endDate: '' };
+    setProfile({ ...profile, education: [newEntry, ...profile.education] });
+  };
+
+  const handleAddSubmit = async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(addForm)
+      });
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setAddForm({ title: '', company: '', status: 'Applied', salary: '', location: '', jobType: 'Full-time', url: '', description: '' });
+        fetchJobs();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Goals State
+  // NOTE: Always initialize to 5 (SSR-safe). Sync from localStorage in useEffect to avoid
+  // hydration mismatch (server renders 5, client reads different value → crash).
+  const [dailyGoal, setDailyGoal] = useState(5);
+  const [showGoalEdit, setShowGoalEdit] = useState(false);
+
+  // Export State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportConfig, setExportConfig] = useState({ type: '30d', startDate: '', endDate: '' });
+
+  const fetchJobs = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/jobs', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
+
+      if (res.status === 401) {
+        if (data.error === 'Unauthorized' || data.error === 'Invalid token') {
+          const auth = getFirebaseAuth();
+          if (auth) await signOut(auth);
+          router.push('/login');
+          return;
+        }
+      }
+
+      if (res.status === 500) {
+        setServerError(data.error || 'Internal Server Error');
+        setJobs([]);
+      } else {
+        setJobs(Array.isArray(data) ? data : []);
+        setServerError(null);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      // One-time check to link any jobs tracked before authentication
+      const claimJobs = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          await fetch('/api/claim-jobs', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          fetchJobs(); // Refresh jobs after claiming
+        } catch (e) {
+          console.error("Claim failed", e);
+        }
+      };
+
+      claimJobs();
+      fetchJobs();
+      fetchProfile();
+      const interval = setInterval(fetchJobs, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const rotateQuote = () => {
+      setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+    };
+
+    // Initial set
+    rotateQuote();
+
+    const interval = setInterval(rotateQuote, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading]);
+
+  // Sync dailyGoal from localStorage after client mount (avoids SSR hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('dailyGoal');
+    if (stored) setDailyGoal(parseInt(stored));
+  }, []);
+
+  const filteredJobs = jobs.filter(job => {
+    if (timeFrame === 'all') return true;
+    const date = new Date(job.date);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (timeFrame === '7d') return diffDays <= 7;
+    if (timeFrame === '30d') return diffDays <= 30;
+    return true;
+  });
+
+  const appliedCount = filteredJobs.length;
+
+  // Stats for Dashboard
+  const statusCounts = filteredJobs.reduce((acc: any, job: any) => {
+    const s = job.status || 'Applied';
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Goal calculation
+  const today = new Date().toLocaleDateString();
+  const todayJobs = jobs.filter(j => new Date(j.date).toLocaleDateString() === today).length;
+  const goalProgress = Math.min(100, (todayJobs / dailyGoal) * 100);
+
+  // Velocity Calculation (Last 7 days vs previous 7 days)
+  const now = new Date();
+  const sevenDayCount = jobs.filter(j => {
+    const d = new Date(j.date);
+    return (now.getTime() - d.getTime()) <= (7 * 24 * 60 * 60 * 1000);
+  }).length;
+
+  const prevSevenDayCount = jobs.filter(j => {
+    const d = new Date(j.date);
+    const diff = now.getTime() - d.getTime();
+    return diff > (7 * 24 * 60 * 60 * 1000) && diff <= (14 * 24 * 60 * 60 * 1000);
+  }).length;
+
+  const velocityTrend = prevSevenDayCount > 0
+    ? Math.round(((sevenDayCount - prevSevenDayCount) / prevSevenDayCount) * 100)
+    : (sevenDayCount > 0 ? 100 : 0);
+
+  // --- Dynamic Activity Chart Logic ---
+  const chartData = useMemo(() => {
+    const data = [];
+    const now = new Date();
+
+    if (chartTimeframe === '7d' || chartTimeframe === '30d') {
+      const days = chartTimeframe === '7d' ? 7 : 30;
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toLocaleDateString();
+        const count = jobs.filter(j => new Date(j.date).toLocaleDateString() === dateStr).length;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: count,
+          raw: dateStr
+        });
+      }
+    } else {
+      // 12 months
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const month = d.getMonth();
+        const year = d.getFullYear();
+        const count = jobs.filter(j => {
+          const jd = new Date(j.date);
+          return jd.getMonth() === month && jd.getFullYear() === year;
+        }).length;
+        data.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          value: count,
+          raw: `${month}-${year}`
+        });
+      }
+    }
+    return data;
+  }, [jobs, chartTimeframe]);
+
+  const maxChartValue = Math.max(...chartData.map(d => d.value), 5); // Base of 5 for scaling
+
+  // Helper for smooth SVG path (Cubic Bezier)
+  const getSmoothPath = (data: any[], isArea = false) => {
+    if (data.length === 0) return '';
+    const points = data.map((d, i) => ({
+      x: (i / (data.length - 1)) * 100,
+      y: 100 - (d.value / maxChartValue) * 100
+    }));
+
+    let d = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? i : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 === points.length ? i + 1 : i + 2];
+
+      // Control points for smoothness
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+
+    if (isArea) {
+      d += ` L 100 100 L 0 100 Z`;
+    }
+    return d;
+  };
+
+  const handleGoalChange = (newGoal: number) => {
+    setDailyGoal(newGoal);
+    localStorage.setItem('dailyGoal', newGoal.toString());
+  };
+
+  const handleExportClick = () => {
+    setIsExportModalOpen(true);
+  };
+
+  const performExport = () => {
+    let jobsToExport = [...jobs];
+    // Implement actual export logic if needed
+    console.log("Exporting...", jobsToExport);
+  };
+
+  const handleDeleteJob = async (url: string) => {
+    if (!user || !confirm('Are you sure you want to delete this job?')) return;
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/jobs', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ url })
+      });
+      fetchJobs();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDragStart = (e: any, job: any) => {
+    e.dataTransfer.setData('jobUrl', job.url);
+  };
+
+  const handleDrop = async (e: any, newStatus: string) => {
+    e.preventDefault();
+    if (!user) return;
+    const url = e.dataTransfer.getData('jobUrl');
+    const job = jobs.find(j => j.url === url);
+    if (!job || job.status === newStatus) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ ...job, status: newStatus })
+      });
+      fetchJobs();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDragOver = (e: any) => {
+    e.preventDefault();
+  };
+
+  const getHeaderStyles = (status: string) => {
+    switch (status) {
+      case 'Applied': return 'text-slate-600 bg-slate-100';
+      case 'Interviewing': return 'text-blue-600 bg-blue-100';
+      case 'Offer': return 'text-purple-600 bg-purple-100';
+      case 'Rejected': return 'text-slate-400 bg-slate-50';
+      default: return 'text-slate-600 bg-slate-100';
+    }
+  };
+
+  const handleEditClick = (job: any) => {
+    setEditingJob(job);
+    setEditForm({
+      title: job.title || '',
+      company: job.company || '',
+      status: job.status || 'Applied',
+      salary: job.salary || '',
+      location: job.location || '',
+      notes: job.notes || '',
+      url: job.url || '',
+      description: job.description || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingJob || !user) return;
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ ...editingJob, ...editForm })
+      });
+      setIsEditModalOpen(false);
+      setEditingJob(null);
+      fetchJobs();
+    } catch (e) {
+      console.error("Failed to save edit", e);
+    }
+  };
+
+  // --- Views ---
+
+  const renderDashboard = () => (
+    <div className="space-y-6 text-slate-900">
+      {/* Error Banner */}
+      {serverError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Icon name="alert" className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-bold">Server Configuration Error</p>
+                <p className="text-sm opacity-80">{serverError}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-xs font-bold transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <button
+          onClick={() => handleTabChange('applications')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+        >
+          <div className="text-slate-500 text-sm font-medium mb-1 group-hover:text-blue-500 transition-colors">Total Applications</div>
+          <div className="text-3xl font-bold text-slate-800">{appliedCount}</div>
+          <div className="mt-2 text-xs text-green-600 font-medium">+ Updated just now</div>
+        </button>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-slate-500 text-sm font-medium">Weekly Velocity</div>
+            {velocityTrend !== 0 && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${velocityTrend > 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                {velocityTrend > 0 ? '↑' : '↓'} {Math.abs(velocityTrend)}%
+              </span>
+            )}
+          </div>
+          <div className="text-3xl font-bold text-slate-800">{sevenDayCount}</div>
+          <div className="mt-2 text-xs text-slate-400 font-medium">Applied (Past 7d)</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-blue-50 to-white">
+          <div className="text-blue-600 text-sm font-medium mb-1">Interviewing</div>
+          <div className="text-3xl font-bold text-blue-900">{statusCounts['Interviewing'] || 0}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 bg-gradient-to-br from-purple-50 to-white">
+          <div className="text-purple-600 text-sm font-medium mb-1">Offers</div>
+          <div className="text-3xl font-bold text-purple-900">{statusCounts['Offer'] || 0}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="text-slate-500 text-sm font-medium mb-1">Rejected</div>
+          <div className="text-3xl font-bold text-slate-400">{statusCounts['Rejected'] || 0}</div>
+        </div>
+      </div>
+
+
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold text-slate-800">Recent Applications</h3>
+              <button
+                onClick={() => setIsAnonymized(!isAnonymized)}
+                className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 group"
+                title={isAnonymized ? "Show names" : "Anonymize names"}
+              >
+                <Icon name={isAnonymized ? "eye-slash" : "eye"} className="w-4 h-4 group-hover:text-blue-500" />
+              </button>
+            </div>
+            <button onClick={() => handleTabChange('applications')} className="text-blue-600 text-xs font-bold hover:underline">View All</button>
+          </div>
+          <div className="space-y-4">
+            {jobs.slice(0, 5).map((job, i) => (
+              <div key={i} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-400 text-lg italic">
+                    {job.company?.[0]?.toUpperCase() || 'J'}
+                  </div>
+                  <div>
+                    <p className={`font-bold text-sm text-slate-800 transition-all duration-300 ${isAnonymized ? 'blur-[4px] select-none opacity-50' : ''}`}>
+                      {isAnonymized ? 'Role Hidden' : job.title}
+                    </p>
+                    <p className={`text-xs text-slate-400 font-medium transition-all duration-300 ${isAnonymized ? 'blur-[4px] select-none opacity-40' : ''}`}>
+                      {isAnonymized ? 'Company Hidden' : job.company}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${getHeaderStyles(job.status)}`}>
+                  {job.status}
+                </span>
+              </div>
+            ))}
+            {jobs.length === 0 && <p className="text-center py-10 text-slate-400 text-sm italic">No applications found yet.</p>}
+          </div>
+        </div>
+
+        {/* Momentum & Tips */}
+        <div className="space-y-6">
+          {/* Application Momentum Line Graph */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Icon name="pipeline" className="w-5 h-5 text-blue-500 rotate-90" />
+                  Application Momentum
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">Application trends over time</p>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-lg relative z-30">
+                {(['7d', '30d', '12m'] as const).map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setChartTimeframe(tf)}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartTimeframe === tf ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {tf.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative h-48 w-full group">
+              {/* The Graph Layer */}
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0f172a" stopOpacity="0.05" />
+                    <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid Lines (Horizontal) - Ultra Light */}
+                {[0, 25, 50, 75, 100].map(pct => (
+                  <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke="#f8fafc" strokeWidth="0.25" />
+                ))}
+
+                {/* Area under the line */}
+                <path
+                  d={getSmoothPath(chartData, true)}
+                  fill="url(#chartGradient)"
+                  className="transition-all duration-700 ease-in-out"
+                />
+
+                {/* The Line - Adjusted Thickness */}
+                <path
+                  d={getSmoothPath(chartData)}
+                  fill="none"
+                  stroke="#0f172a"
+                  strokeWidth="0.85"
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="transition-all duration-700 ease-in-out"
+                />
+              </svg>
+
+              {/* Interaction & Point Layer (HTML to prevent SVG stretching) */}
+              {chartData.map((d, i) => {
+                const x = (i / (chartData.length - 1)) * 100;
+                const y = 100 - (d.value / maxChartValue) * 100;
+                const isHovered = hoveredPoint?.raw === d.raw;
+
+                return (
+                  <div
+                    key={i}
+                    className="absolute group/point"
+                    style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
+                    onMouseEnter={() => setHoveredPoint({ ...d, x, y })}
+                    onMouseLeave={() => setHoveredPoint(null)}
+                  >
+                    {/* The Dot - Solid Black, Slightly Bigger */}
+                    <div
+                      className={`rounded-full bg-slate-900 transition-all duration-300 ${isHovered ? 'w-[10px] h-[10px]' : 'w-[6px] h-[6px]'}`}
+                    />
+
+                    {/* Interaction Bridge (Invisible tall area) */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-48 cursor-pointer" />
+                  </div>
+                );
+              })}
+
+              {/* Tooltip */}
+              {hoveredPoint && (
+                <div
+                  className="absolute pointer-events-none bg-slate-900 text-white p-2.5 rounded-xl text-[10px] shadow-2xl z-20 animate-in fade-in zoom-in duration-150 border border-white/10"
+                  style={{
+                    left: `${hoveredPoint.x}%`,
+                    top: `${hoveredPoint.y}%`,
+                    transform: `translate(${hoveredPoint.x > 80 ? '-100%' : hoveredPoint.x < 20 ? '0%' : '-50%'}, ${hoveredPoint.y < 35 ? '40%' : '-130%'})`
+                  }}
+                >
+                  <p className="font-bold whitespace-nowrap">{hoveredPoint.label}</p>
+                  <p className="opacity-80 font-medium text-blue-400">{hoveredPoint.value} Applications</p>
+                </div>
+              )}
+            </div>
+
+            {/* X-Axis Labels (Sparse if 30d) */}
+            <div className="flex justify-between mt-4">
+              {chartData.filter((_, i) => {
+                if (chartTimeframe === '30d') return i % 5 === 0 || i === chartData.length - 1;
+                if (chartTimeframe === '12m') return i % 2 === 0 || i === chartData.length - 1;
+                return true;
+              }).map((d, i) => (
+                <span key={i} className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                  {d.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Icon name="check" className="w-5 h-5 text-green-500" />
+              Interview Tip of the Day
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
+              {interviewTips[Math.floor(new Date().getDate() % interviewTips.length)]}
+            </p>
+          </div>
+
+          {/* Daily Goal Bar */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-sm font-medium text-slate-800">Daily Goal</h3>
+                <p className="text-[10px] text-slate-500">Apply: {dailyGoal} positions today</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-lg font-black text-blue-600">{todayJobs}</span>
+                  <span className="text-slate-300 mx-1">/</span>
+                  <span className="text-sm font-bold text-slate-400">{dailyGoal}</span>
+                </div>
+                <button
+                  onClick={() => setShowGoalEdit(!showGoalEdit)}
+                  className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+                >
+                  <Icon name="edit" className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {showGoalEdit && (
+              <div className="mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <input
+                  type="range" min="1" max="20"
+                  value={dailyGoal}
+                  onChange={(e) => handleGoalChange(parseInt(e.target.value))}
+                  className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <span className="text-xs font-bold text-blue-600 w-6">{dailyGoal}</span>
+              </div>
+            )}
+
+            <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-1000 ease-out"
+                style={{ width: `${goalProgress}%` }}
+              >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+
+  const renderApplications = () => (
+    <div className="space-y-6 overflow-hidden">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Job Pipeline</h2>
+          <p className="text-sm text-slate-500">Manage and track your application status</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl sm:rounded-xl rounded-none shadow-sm border border-slate-200 overflow-x-auto -mx-4 sm:mx-0">
+        <table className="w-full text-left min-w-[700px]">
+          <thead className="bg-slate-50 border-b border-slate-100">
+            <tr>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Job Details</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Salary</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {jobs.filter(j =>
+              j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              j.company.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((job, i) => (
+              <tr
+                key={i}
+                className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                onClick={() => window.open(job.url, '_blank')}
+              >
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm text-slate-800 font-medium">{job.title}</p>
+                    {job.url && <span className="text-slate-300 text-[10px]" title={job.url}>🔗</span>}
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium">{job.company} • {job.location || 'Remote'}</p>
+                </td>
+                <td className="px-6 py-4">
+                  {job.salary ? <span className="text-sm text-green-600 font-medium bg-green-50 px-2.5 py-1 rounded-lg">{job.salary}</span> : <span className="text-slate-300 text-xs">-</span>}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-center">
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full uppercase tracking-wide ${getHeaderStyles(job.status)}`}>
+                      {job.status}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-500 font-medium whitespace-nowrap">
+                  {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex justify-end gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(job); }}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Edit"
+                    >
+                      <Icon name="edit" className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description || ''); }}
+                      className={`p-2 rounded-lg transition-all ${job.description ? 'text-slate-400 hover:text-purple-600 hover:bg-purple-50' : 'text-slate-200 cursor-default hover:bg-slate-50'}`}
+                      title={job.description ? "View Job Description" : "No description available"}
+                    >
+                      <Icon name="book" className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      title="Delete"
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {jobs.length === 0 && (
+          <div className="p-20 text-center">
+            <Icon name="briefcase" className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium">No applications found.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPipeline = () => {
+    const statuses = ['Applied', 'Interviewing', 'Offer', 'Rejected'];
+    return (
+      <div className="h-[calc(100vh-140px)] flex flex-col">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-800">Visual Pipeline</h2>
+          <p className="text-sm text-slate-500">Drag and drop jobs to change their status</p>
+        </div>
+
+        <div className="flex-1 flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+          {statuses.map(status => (
+            <div
+              key={status}
+              className="flex-shrink-0 w-80 bg-slate-100/50 rounded-2xl border border-slate-200/50 flex flex-col p-4"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, status)}
+            >
+              <div className="flex justify-between items-center mb-4 select-none">
+                <h4 className={`font-bold text-sm uppercase tracking-wide ${getHeaderStyles(status).split(' ')[0]}`}>{status}</h4>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getHeaderStyles(status)}`}>{statusCounts[status] || 0}</span>
+              </div>
+              <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-[200px]">
+                {filteredJobs.filter((j: any) => (j.status || 'Applied') === status).map((job: any, i) => (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, job)}
+                    onClick={() => window.open(job.url, '_blank')}
+                    className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:border-blue-300 group"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h5 className="text-sm font-medium text-slate-800 leading-snug">{job.title}</h5>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.url); }}
+                        className="text-slate-300 hover:text-red-500 transition-colors p-1 -mt-1 -mr-1"
+                      >
+                        <Icon name="trash" className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-2 font-medium">{job.company}</p>
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingDescription(job.description || ''); }}
+                      className={`mb-3 flex items-center gap-1.5 text-[10px] font-bold transition-colors uppercase tracking-tight ${job.description ? 'text-slate-400 hover:text-purple-600' : 'text-slate-200 cursor-default'}`}
+                    >
+                      <Icon name="book" className="w-3 h-3" />
+                      {job.description ? 'View Description' : 'No Description'}
+                    </button>
+
+                    <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-50 pt-3">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                        {new Date(job.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                      {job.salary && <span className="text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded">{job.salary.replace(/.*(\$[\d,]+k?).*/i, '$1')}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderProfile = () => {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-2">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900 heading-font">Career Profile</h2>
+            <p className="text-slate-500 font-medium">Auto-populate job applications with your saved details.</p>
+          </div>
+          <button
+            onClick={saveProfile}
+            disabled={isSavingProfile}
+            className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-xl shadow-slate-200 disabled:opacity-50"
+          >
+            {isSavingProfile ? (
+              <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              <Icon name="check" className="w-5 h-5" />
+            )}
+            {isSavingProfile ? 'Saving...' : 'Save Profile'}
+          </button>
+        </div>
+
+        {profileMessage.text && (
+          <div className={`p-4 rounded-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${profileMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${profileMessage.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+              <Icon name={profileMessage.type === 'success' ? 'check' : 'alert'} className="w-5 h-5" />
+            </div>
+            <p className="font-bold text-sm tracking-tight">{profileMessage.text}</p>
+          </div>
+        )}
+
+        {/* Personal Details */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 heading-font">
+            <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-sm">01</span>
+            Personal Details
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+              <input
+                type="text"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.full_name}
+                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              <input
+                type="email"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.email}
+                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                placeholder="john@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+              <input
+                type="tel"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Location</label>
+              <input
+                type="text"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.location}
+                onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                placeholder="e.g. San Francisco, CA"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end mt-8 border-t border-slate-50 pt-6">
+            <button
+              onClick={() => saveProfileSection({
+                full_name: profile.full_name,
+                email: profile.email,
+                phone: profile.phone,
+                location: profile.location
+              })}
+              disabled={isSavingProfile}
+              className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+            >
+              {isSavingProfile ? (
+                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                <Icon name="check" className="w-5 h-5" />
+              )}
+              Save Details
+            </button>
+          </div>
+        </section>
+
+        {/* Social Links */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 heading-font">
+            <span className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-sm">02</span>
+            Socials & Links
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">LinkedIn URL</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.linkedin}
+                onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+                placeholder="linkedin.com/in/username"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Portfolio or Website</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.portfolio}
+                onChange={(e) => setProfile({ ...profile, portfolio: e.target.value })}
+                placeholder="yourportfolio.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">GitHub URL</label>
+              <input
+                type="url"
+                className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                value={profile.github}
+                onChange={(e) => setProfile({ ...profile, github: e.target.value })}
+                placeholder="github.com/username"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end mt-8 border-t border-slate-50 pt-6">
+            <button
+              onClick={() => saveProfileSection({
+                linkedin: profile.linkedin,
+                portfolio: profile.portfolio,
+                github: profile.github
+              })}
+              disabled={isSavingProfile}
+              className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+            >
+              {isSavingProfile ? (
+                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                <Icon name="check" className="w-5 h-5" />
+              )}
+              Save Links
+            </button>
+          </div>
+        </section>
+
+        {/* Work History */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3 heading-font">
+              <span className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center text-sm">03</span>
+              Work Experience
+            </h3>
+            <button
+              onClick={addWorkEntry}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-3.5 h-3.5" /> Add Experience
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {profile.work_history.map((work: any, index: number) => (
+              <div key={index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30 relative group animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={() => {
+                    const newHistory = [...profile.work_history];
+                    newHistory.splice(index, 1);
+                    setProfile({ ...profile, work_history: newHistory });
+                  }}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Company</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.company}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].company = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Acme Corp"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Job Title</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.title}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].title = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Senior Developer"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Start Date</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.startDate}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].startDate = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Jan 2020"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">End Date</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={work.endDate}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].endDate = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="e.g. Present"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Achievements</label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all resize-none"
+                      value={work.description}
+                      onChange={(e) => {
+                        const newHistory = [...profile.work_history];
+                        newHistory[index].description = e.target.value;
+                        setProfile({ ...profile, work_history: newHistory });
+                      }}
+                      placeholder="Briefly describe your impact..."
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {profile.work_history.length > 0 && (
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={() => saveProfileSection({ work_history: profile.work_history })}
+                  disabled={isSavingProfile}
+                  className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {isSavingProfile ? (
+                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <Icon name="check" className="w-5 h-5" />
+                  )}
+                  Save Experience
+                </button>
+              </div>
+            )}
+            {profile.work_history.length === 0 && (
+              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <p className="text-slate-400 text-sm font-medium italic">No work experience added yet.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Education */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3 heading-font">
+              <span className="w-8 h-8 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center text-sm">04</span>
+              Education
+            </h3>
+            <button
+              onClick={addEducationEntry}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-3.5 h-3.5" /> Add School
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {profile.education.map((edu: any, index: number) => (
+              <div key={index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30 relative group animate-in fade-in slide-in-from-top-2">
+                <button
+                  onClick={() => {
+                    const newEdu = [...profile.education];
+                    newEdu.splice(index, 1);
+                    setProfile({ ...profile, education: newEdu });
+                  }}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Institution</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.school}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].school = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. Stanford University"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Degree / Major</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.degree}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].degree = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. BS in Computer Science"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Started</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.startDate}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].startDate = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. Sep 2016"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Graduated</label>
+                    <input
+                      className="w-full px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm focus:border-blue-500 outline-none transition-all"
+                      value={edu.endDate}
+                      onChange={(e) => {
+                        const newEdu = [...profile.education];
+                        newEdu[index].endDate = e.target.value;
+                        setProfile({ ...profile, education: newEdu });
+                      }}
+                      placeholder="e.g. June 2020"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {profile.education.length > 0 && (
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={() => saveProfileSection({ education: profile.education })}
+                  disabled={isSavingProfile}
+                  className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {isSavingProfile ? (
+                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <Icon name="check" className="w-5 h-5" />
+                  )}
+                  Save Education
+                </button>
+              </div>
+            )
+            }
+            {profile.education.length === 0 && (
+              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <p className="text-slate-400 text-sm font-medium italic">No education added yet.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Skills Section */}
+        <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 lg:p-10 mt-8">
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 heading-font">
+            <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-sm">05</span>
+            Professional Skills
+          </h3>
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {(profile.skills || []).map((skill: string, i: number) => (
+                <span key={i} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold flex items-center gap-2 animate-in zoom-in duration-200">
+                  {skill}
+                  <button
+                    onClick={() => {
+                      const newSkills = (profile.skills || []).filter((s: string) => s !== skill);
+                      setProfile({ ...profile, skills: newSkills });
+                    }}
+                    className="hover:text-blue-800"
+                  >
+                    <Icon name="x" className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {(!profile.skills || profile.skills.length === 0) && (
+                <p className="text-slate-400 text-sm font-medium italic">No skills added yet.</p>
+              )}
+            </div>
+
+            <div className="relative group">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Search & Add Skills (Strategy, Product, Operations)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="w-full px-5 py-4 rounded-xl border border-slate-100 bg-slate-50/50 text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300 font-medium"
+                  placeholder="Type to search e.g. Roadmap, Strategy, Supply Chain..."
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val && !(profile.skills || []).includes(val)) {
+                        setProfile({ ...profile, skills: [...(profile.skills || []), val] });
+                        setSkillSearch('');
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                  {skillSearch ? `Matches for "${skillSearch}"` : 'Suggested for you'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {filteredSuggestions.map((skill: string) => (
+                    <button
+                      key={skill}
+                      onClick={() => {
+                        setProfile({ ...profile, skills: [...(profile.skills || []), skill] });
+                        setSkillSearch('');
+                      }}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 rounded-lg text-xs font-bold border border-slate-100 transition-all active:scale-95"
+                    >
+                      + {skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={() => saveProfileSection({ skills: profile.skills })}
+                disabled={isSavingProfile}
+                className="px-8 py-3 bg-slate-900 border-2 border-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+              >
+                {isSavingProfile ? (
+                  <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                ) : (
+                  <Icon name="check" className="w-5 h-5" />
+                )}
+                Save Skills
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  const renderMobileNav = () => (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 pb-safe">
+      <button
+        onClick={() => handleTabChange('dashboard')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="dashboard" className="w-6 h-6" />
+        Dashboard
+      </button>
+      <button
+        onClick={() => handleTabChange('applications')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'applications' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="briefcase" className="w-6 h-6" />
+        Applications
+      </button>
+      <button
+        onClick={() => handleTabChange('pipeline')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'pipeline' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="pipeline" className="w-6 h-6" />
+        Pipeline
+      </button>
+      <button
+        onClick={() => handleTabChange('profile')}
+        className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-500'}`}
+      >
+        <Icon name="user" className="w-6 h-6" />
+        Profile
+      </button>
+    </div>
+  );
+
+  if (authLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 pb-16 md:pb-0">
+
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
+        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">T</div>
+          <span className="font-bold text-lg text-slate-800">Trackr</span>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-1">
+          <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="dashboard" className="w-5 h-5" />
+            Dashboard
+          </button>
+          <button onClick={() => handleTabChange('applications')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'applications' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="briefcase" className="w-5 h-5" />
+            Applications
+          </button>
+          <button onClick={() => handleTabChange('pipeline')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'pipeline' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="pipeline" className="w-5 h-5" />
+            Pipeline
+          </button>
+          <button onClick={() => handleTabChange('profile')} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'profile' ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+            <Icon name="user" className="w-5 h-5" />
+            Profile (Autofill)
+          </button>
+        </nav>
+
+        <div className="px-4 pb-4">
+          <a href="#" target="_blank" className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200 bg-slate-50/50">
+            <Icon name="download" className="w-5 h-5 text-slate-400" />
+            Get Extension
+          </a>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
+          <div className="px-8 h-20 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-slate-800 capitalize">{activeTab}</h1>
+
+            <div className="flex items-center gap-4">
+              {activeTab === 'applications' && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="hidden sm:flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 border border-white/10"
+                >
+                  <Icon name="plus" className="w-3.5 h-3.5" />
+                  Add Job
+                </button>
+              )}
+              <button onClick={fetchJobs} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Refresh">
+                <Icon name="refresh" className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={handleExportClick} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all" title="Export">
+                <Icon name="download" className="w-5 h-5" />
+              </button>
+              <div className="w-px h-6 bg-slate-200" />
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-slate-800">{user?.displayName?.split(' ')[0] || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
+                    {user?.email ? (
+                      user.email.replace(/(.{1,2})(.*)(@.*)/, '$1***$3')
+                    ) : '***@***.***'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const auth = getFirebaseAuth();
+                    if (auth) await signOut(auth);
+                  }}
+                  className="p-2 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                  title="Log Out"
+                >
+                  <Icon name="logout" className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4 sm:p-8">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'applications' && renderApplications()}
+          {activeTab === 'pipeline' && renderPipeline()}
+          {activeTab === 'profile' && renderProfile()}
+        </div>
+      </main>
+
+      {/* Add Modal */}
+      {
+        isAddModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Add New Application</h3>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Frontend Engineer"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.title}
+                      onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Company *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Google"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.company}
+                      onChange={(e) => setAddForm({ ...addForm, company: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.status}
+                      onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+                    >
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. New York, NY"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.location}
+                      onChange={(e) => setAddForm({ ...addForm, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. $120k"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.salary}
+                      onChange={(e) => setAddForm({ ...addForm, salary: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Type</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.jobType}
+                      onChange={(e) => setAddForm({ ...addForm, jobType: e.target.value })}
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Internship">Internship</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Job URL - full width */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Posting URL</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔗</span>
+                    <input
+                      type="url"
+                      placeholder="https://jobs.company.com/role"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={addForm.url}
+                      onChange={(e) => setAddForm({ ...addForm, url: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Description</label>
+                  <textarea
+                    placeholder="Paste the full job description here..."
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
+                    value={addForm.description}
+                    onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddSubmit}
+                  disabled={!addForm.title || !addForm.company}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Entry
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Edit Modal */}
+      {
+        isEditModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Edit Application</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Job Title</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Company</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.company}
+                      onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                    <select
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    >
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Salary</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="e.g. $120k"
+                      value={editForm.salary}
+                      onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Location</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                  />
+                </div>
+
+                {/* Job URL - full width */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Posting URL</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔗</span>
+                    <input
+                      type="url"
+                      placeholder="https://jobs.company.com/role"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={editForm.url || ''}
+                      onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
+                  <textarea
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Job Description</label>
+                  <textarea
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Icon name="check" className="w-4 h-4" /> Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Export Modal */}
+      {
+        isExportModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-lg text-slate-800">Export Options</h3>
+                <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === '7d'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: '7d' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Last 7 Days</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === '30d'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: '30d' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Last 30 Days</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportType"
+                      checked={exportConfig.type === 'custom'}
+                      onChange={() => setExportConfig({ ...exportConfig, type: 'custom' })}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Custom Range (Max 90 days)</span>
+                  </label>
+                </div>
+
+                {exportConfig.type === 'custom' && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Start Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={exportConfig.startDate}
+                        onChange={(e) => setExportConfig({ ...exportConfig, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">End Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={exportConfig.endDate}
+                        onChange={(e) => setExportConfig({ ...exportConfig, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={performExport}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  Download CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {renderMobileNav()}
+
+      {/* View Description Modal */}
+      {
+        viewingDescription && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden animate-in fade-in zoom-in slide-in-from-bottom-8 duration-300">
+              <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                  <h3 className="font-bold text-xl text-slate-800">Job Description</h3>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-0.5">Role requirements & details</p>
+                </div>
+                <button
+                  onClick={() => setViewingDescription(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                >
+                  <Icon name="x" className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto max-h-[calc(85vh-80px)] scrollbar-thin scrollbar-thumb-slate-200">
+                <div
+                  className="reader-content max-w-none text-slate-600 leading-relaxed text-sm selection:bg-blue-100"
+                  dangerouslySetInnerHTML={{ __html: viewingDescription }}
+                />
+                {(!viewingDescription || viewingDescription.trim() === '') && (
+                  <div className="py-20 text-center">
+                    <Icon name="book" className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-medium">No description content available.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
+                <button
+                  onClick={() => setViewingDescription(null)}
+                  className="px-8 py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-200"
+                >
+                  Close Reader
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Mobile Floating Add Button */}
+      {
+        activeTab === 'applications' && (
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="md:hidden fixed bottom-24 right-6 w-12 h-12 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center z-40 active:scale-90 transition-transform"
+          >
+            <Icon name="plus" className="w-6 h-6" />
+          </button>
+        )
+      }
+    </div >
+  );
+}

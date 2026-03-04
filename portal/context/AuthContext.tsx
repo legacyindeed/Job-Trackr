@@ -1,0 +1,49 @@
+'use client';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { getFirebaseAuth } from '../lib/firebase';
+
+interface AuthContextType {
+    user: User | null;
+    loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const auth = getFirebaseAuth();
+        if (!auth) {
+            setLoading(false);
+            return;
+        }
+
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            setUser(user);
+            setLoading(false);
+
+            if (user) {
+                const idToken = await user.getIdToken();
+                localStorage.setItem('firebase_id_token', idToken);
+                localStorage.setItem('trackr_user_email', user.email || '');
+            } else {
+                localStorage.removeItem('firebase_id_token');
+                localStorage.removeItem('trackr_user_email');
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return (
+        <AuthContext.Provider value={{ user, loading }}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = () => useContext(AuthContext);

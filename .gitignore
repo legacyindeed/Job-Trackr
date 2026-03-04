@@ -1,0 +1,21 @@
+node_modules
+.DS_Store
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea
+.vscode
+*.log
+
+# Local data files — may contain sensitive/personal data
+portal/data/
+
+# Migration scripts (contain hardcoded credentials)
+migrate-data.js
+
+# Root-level npm artifacts (from one-off scripts)
+package.json
+package-lock.json

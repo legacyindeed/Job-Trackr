@@ -1,0 +1,14 @@
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/portal/$1"
+        }
+    ],
+    "builds": [
+        {
+            "src": "portal/package.json",
+            "use": "@vercel/next"
+        }
+    ]
+}

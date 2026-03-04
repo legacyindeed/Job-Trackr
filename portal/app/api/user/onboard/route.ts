@@ -1,0 +1,43 @@
+import { NextResponse } from 'next/server';
+import { adminAuth } from '../../../../lib/firebase-admin';
+import sql from '../../../../lib/db';
+
+export async function POST(request: Request) {
+    try {
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const idToken = authHeader.split('Bearer ')[1];
+        let uid: string;
+
+        try {
+            const decodedToken = await adminAuth.verifyIdToken(idToken);
+            uid = decodedToken.uid;
+        } catch (error: any) {
+            if (error.message?.includes('SERVER_CONFIG_ERROR')) {
+                return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+            }
+            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        }
+
+        const orphanJobs = await sql`SELECT count(*) FROM jobs WHERE user_id IS NULL`;
+        const orphanCount = parseInt(orphanJobs[0].count);
+
+        if (orphanCount > 0) {
+            const userWithJobs = await sql`SELECT count(DISTINCT user_id) FROM jobs WHERE user_id IS NOT NULL`;
+            const userCount = parseInt(userWithJobs[0].count);
+
+            if (userCount === 0) {
+                await sql`UPDATE jobs SET user_id = ${uid} WHERE user_id IS NULL`;
+                return NextResponse.json({ success: true, claimed: orphanCount });
+            }
+        }
+
+        return NextResponse.json({ success: true, claimed: 0 });
+    } catch (error: any) {
+        console.error('Onboarding error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
