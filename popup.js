@@ -88,8 +88,8 @@ function checkAuth() {
 }
 
 async function login() {
-    // Open the portal sign-up page
-    chrome.tabs.create({ url: 'https://job-trackr-ten.vercel.app/signup' });
+    // Open the portal login page
+    chrome.tabs.create({ url: 'https://job-trackr-ten.vercel.app/login' });
 
     // The auth-sync.js content script will automatically capture the token 
     // when the user logs in on the portal and send it to the background script.
