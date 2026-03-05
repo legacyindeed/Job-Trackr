@@ -232,7 +232,11 @@ export default function SignupPage() {
                     </div>
 
                     <button
-                        onClick={handleGoogleSignIn}
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleGoogleSignIn();
+                        }}
                         disabled={loading}
                         className="w-full py-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 group shadow-sm disabled:opacity-70"
                     >
