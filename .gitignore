@@ -15,7 +15,3 @@ portal/data/
 
 # Migration scripts (contain hardcoded credentials)
 migrate-data.js
-
-# Root-level npm artifacts (from one-off scripts)
-package.json
-package-lock.json
