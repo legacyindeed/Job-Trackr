@@ -1,9 +1,0 @@
-{
-    "name": "job-trackr",
-    "private": true,
-    "scripts": {
-        "build": "cd portal && npm install && npm run build",
-        "dev": "cd portal && npm run dev",
-        "start": "cd portal && npm start"
-    }
-}
